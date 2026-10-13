@@ -4702,28 +4702,28 @@ function renderAuth(view, msg, kind){
       </form>
       <div class="auth-links"><a onclick="renderAuth('forgot')">Lupa password?</a><span>Belum punya akun? <a onclick="renderAuth('register')">Daftar</a></span></div>`);
   } else if (view === 'register'){
-    html = authShell(`<h2>Daftar Akun</h2><div class="auth-sub">Akun baru perlu disetujui Owner sebelum bisa dipakai</div>${m}
+    html = authShell(`<h2>Daftar Akun</h2><div class="auth-sub">Buat akun baru untuk mulai menggunakan aplikasi</div>${m}
       <form onsubmit="authSubmitRegister(event)">
         <div class="field"><label>Nama Lengkap</label><input id="au_name" required></div>
         <div class="field"><label>Email</label><input id="au_email" type="email" autocomplete="email" required></div>
-        <div class="field"><label>Password (min. 6 karakter)</label><input id="au_pass" type="password" minlength="6" autocomplete="new-password" required></div>
-        <div class="field"><label>Daftar sebagai</label>
+        <div class="field"><label>Password</label><input id="au_pass" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="field"><label>Daftar Sebagai</label>
           <div class="auth-roles">
-            <label><input type="radio" name="au_role" value="karyawan" checked>Karyawan<small>Bergabung ke usaha yang sudah ada</small></label>
-            <label><input type="radio" name="au_role" value="owner">Owner<small>Pemilik / pengelola usaha</small></label>
+            <label><input type="radio" name="au_role" value="karyawan" checked>Karyawan<small>Bergabung ke perusahaan milik Owner</small></label>
+            <label><input type="radio" name="au_role" value="owner">Owner<small>Membuat &amp; mengelola perusahaan sendiri</small></label>
           </div></div>
         <button class="btn btn-primary" type="submit" id="au_btn">Daftar</button>
       </form>
       <div class="auth-links"><a onclick="renderAuth('login')">&larr; Kembali ke Masuk</a></div>`);
   } else if (view === 'forgot'){
-    html = authShell(`<h2>Lupa Password</h2><div class="auth-sub">Kami kirim tautan untuk membuat password baru</div>${m}
+    html = authShell(`<h2>Lupa Password</h2><div class="auth-sub">Masukkan email akun kamu, kami akan kirim tautan untuk membuat password baru</div>${m}
       <form onsubmit="authSubmitForgot(event)">
         <div class="field"><label>Email</label><input id="au_email" type="email" required></div>
         <button class="btn btn-primary" type="submit" id="au_btn">Kirim Tautan Reset</button>
       </form>
       <div class="auth-links"><a onclick="renderAuth('login')">&larr; Kembali ke Masuk</a></div>`);
   } else if (view === 'reset'){
-    html = authShell(`<h2>Buat Password Baru</h2><div class="auth-sub">Masukkan password baru untuk akun Anda</div>${m}
+    html = authShell(`<h2>Buat Password Baru</h2><div class="auth-sub">Masukkan password baru untuk akun kamu</div>${m}
       <form onsubmit="authSubmitReset(event)">
         <div class="field"><label>Password Baru</label><input id="au_pass" type="password" minlength="6" autocomplete="new-password" required></div>
         <div class="field"><label>Ulangi Password</label><input id="au_pass2" type="password" minlength="6" autocomplete="new-password" required></div>
@@ -4732,16 +4732,16 @@ function renderAuth(view, msg, kind){
       <div class="auth-links"><a onclick="authResetCancel()">&larr; Kembali ke Masuk</a></div>`);
   } else if (view === 'pending'){
     html = authShell(`<div class="auth-status-ico">&#9203;</div><h2>Menunggu Persetujuan</h2>
-      <div class="auth-sub">Akun <strong>${esc((authProfile&&authProfile.email)||'')}</strong> sudah terdaftar. Owner perlu menyetujuinya sebelum Anda bisa masuk.</div>${m}
+      <div class="auth-sub">Pendaftaran kamu sudah diterima dan sedang menunggu persetujuan pemilik. Kamu akan bisa masuk setelah disetujui.</div>${m}
       <button class="btn btn-primary" onclick="authCheckStatus()">Cek Status Lagi</button>
-      <div class="auth-links" style="justify-content:center;"><a onclick="authLogout()">Keluar</a></div>`);
+      <button class="btn btn-outline" style="margin-top:10px;" onclick="authLogout()">Keluar</button>`);
   } else if (view === 'rejected'){
     html = authShell(`<div class="auth-status-ico">&#128683;</div><h2>Pendaftaran Ditolak</h2>
-      <div class="auth-sub">Pendaftaran akun ini ditolak. Silakan hubungi pemilik aplikasi.</div>${m}
+      <div class="auth-sub">Maaf, pendaftaran akun kamu ditolak oleh pemilik. Hubungi pemilik aplikasi untuk informasi lebih lanjut.</div>${m}
       <button class="btn btn-outline" onclick="authLogout()">Keluar</button>`);
   } else if (view === 'inactive'){
     html = authShell(`<div class="auth-status-ico">&#128274;</div><h2>Akun Dinonaktifkan</h2>
-      <div class="auth-sub">Akun kamu telah dinonaktifkan oleh pemilik aplikasi.</div>${m}
+      <div class="auth-sub">Akun kamu telah dinonaktifkan oleh pemilik aplikasi dan tidak bisa digunakan untuk saat ini. Hubungi pemilik aplikasi untuk informasi lebih lanjut.</div>${m}
       <button class="btn btn-outline" onclick="authLogout()">Keluar</button>`);
   } else {
     html = authShell(`<div style="text-align:center;color:var(--ink-soft);padding:20px 0;">${esc(msg||'Memuat…')}</div>`);
