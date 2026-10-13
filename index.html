@@ -344,6 +344,26 @@
     .panel{display:none;}
     .panel.print-active{display:block !important;}
   }
+
+  /* ===== Layar Login / Auth ===== */
+  #authScreen{position:fixed; inset:0; z-index:1000; background:linear-gradient(160deg,var(--navy-950),var(--navy-800)); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto;}
+  #authScreen[hidden]{display:none;}
+  .auth-card{background:#fff; width:100%; max-width:400px; border-radius:12px; padding:28px 26px; box-shadow:0 24px 60px rgba(0,0,0,.35);}
+  .auth-logo{width:46px; height:46px; border-radius:12px; background:var(--navy-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:22px; margin:0 auto 10px;}
+  .auth-card h2{margin:0 0 4px; text-align:center; font-family:var(--serif); font-size:20px;}
+  .auth-card .auth-sub{text-align:center; color:var(--ink-soft); font-size:13px; margin-bottom:18px;}
+  .auth-card .field{margin-bottom:12px;}
+  .auth-card .btn{width:100%; justify-content:center; padding:10px 12px; font-size:14px;}
+  .auth-msg{font-size:12.5px; padding:9px 11px; border-radius:6px; margin-bottom:12px;}
+  .auth-msg.err{background:var(--rust-bg); color:var(--rust);}
+  .auth-msg.ok{background:var(--green-bg); color:var(--green);}
+  .auth-links{display:flex; justify-content:space-between; font-size:12.5px; margin-top:14px;}
+  .auth-links a{color:var(--navy-700); cursor:pointer; text-decoration:underline;}
+  .auth-roles{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .auth-roles label{border:1px solid var(--line); border-radius:8px; padding:9px 10px; cursor:pointer; font-size:12.5px; display:block;}
+  .auth-roles label input{width:auto; margin-right:6px;}
+  .auth-roles label small{display:block; color:var(--ink-soft); margin-top:2px;}
+  .auth-status-ico{font-size:34px; text-align:center; margin-bottom:6px;}
 </style>
 </head>
 <body>
@@ -417,8 +437,7 @@
         <button id="redoBtn" class="btn btn-outline btn-sm no-print" style="display:none;" onclick="redoLastAction()" title="Ulangi aksi yang baru diurungkan">&#8618; Ulangi</button>
         <button class="btn btn-outline btn-sm no-print" onclick="exportBackupJSON()" title="Unduh seluruh data sebagai file cadangan">&#128190; Backup <span id="unsavedBadge"></span></button>
         <button class="btn btn-outline btn-sm no-print" onclick="triggerImportBackup()" title="Muat data dari file cadangan">&#128193; Muat Cadangan</button>
-        <select id="roleSwitcher" onchange="DB.activeUser=this.value; renderCurrent();" style="font-size:11.5px; padding:4px 8px; width:auto;" title="Masuk sebagai pengguna (dikelola lewat menu Pengaturan Sistem oleh Owner)">
-        </select>
+        <span id="roleSwitcher" style="display:inline-flex; align-items:center; gap:8px; font-size:12px;"></span>
       </div>
       <div style="display:flex; align-items:baseline; justify-content:space-between;">
         <div>
@@ -437,6 +456,8 @@
 
 </div>
 
+<div id="authScreen"><div class="auth-card"><div style="text-align:center;color:var(--ink-soft);">Memuat&hellip;</div></div></div>
+
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-head">
@@ -452,6 +473,11 @@
 <input type="file" id="coaImportInput" accept=".csv,text/csv" style="display:none;" onchange="handleImportCoaCSV(this)">
 
 <script>
+/* status login (dideklarasikan paling awal agar aman dipakai fungsi lain saat inisialisasi) */
+let authSession = null;   // {access_token, refresh_token, expires_at, user}
+let authProfile = null;   // baris akt_profiles milik pengguna yang login
+let authUsers = null;     // daftar semua profil (khusus Owner)
+let authRecoveryToken = null;
 /* ============================================================
    BUKU AKUNTANSI — Aplikasi pembukuan sederhana (single file)
    Data disimpan in-memory selama sesi berjalan di peramban.
@@ -494,7 +520,7 @@ let currentTab = 'dashboard';
 function logAudit(action, target, detail){
   DB.auditLog.push({
     id: uid('log'), ts: new Date().toISOString(),
-    actor: (DB.users.find(u=>u.id===DB.activeUser)||{}).name || DB.activeUser,
+    actor: actorName(),
     action, target, detail: detail || ''
   });
   // batasi log agar tidak tak terbatas
@@ -523,7 +549,7 @@ function exportBackupJSON(){
 }
 function logAuditSilent(action, target, detail){
   // sama seperti logAudit tapi tidak menambah unsavedChangeCount (dipakai untuk aksi backup itu sendiri)
-  DB.auditLog.push({id: uid('log'), ts: new Date().toISOString(), actor: (DB.users.find(u=>u.id===DB.activeUser)||{}).name || DB.activeUser, action, target, detail: detail||''});
+  DB.auditLog.push({id: uid('log'), ts: new Date().toISOString(), actor: actorName(), action, target, detail: detail||''});
 }
 function triggerImportBackup(){
   document.getElementById('backupFileInput').click();
@@ -585,7 +611,7 @@ function supaConfigured(){ return !!(supaConfig.url && supaConfig.key && supaCon
 function supaHeaders(extra){
   return Object.assign({
     'apikey': supaConfig.key,
-    'Authorization': 'Bearer ' + supaConfig.key,
+    'Authorization': 'Bearer ' + ((authSession && authSession.access_token) || supaConfig.key),
     'Content-Type': 'application/json'
   }, extra || {});
 }
@@ -614,6 +640,7 @@ async function supaTestConnection(){
   }
 }
 async function supaPush(silent){
+  await authEnsureToken();
   if (!supaConfigured()){ if(!silent) alert('Lengkapi dulu Pengaturan Supabase di menu Pengaturan Sistem.'); return false; }
   if (!silent) setSupaStatus('busy', 'Menyimpan ke cloud…');
   try {
@@ -640,6 +667,7 @@ async function supaPush(silent){
   }
 }
 async function supaPull(silent){
+  await authEnsureToken();
   if (!supaConfigured()){ if(!silent) alert('Lengkapi dulu Pengaturan Supabase di menu Pengaturan Sistem.'); return false; }
   if (!silent) setSupaStatus('busy', 'Memuat dari cloud…');
   try {
@@ -727,6 +755,7 @@ function redoLastAction(){
 }
 
 function currentRole(){
+  if (authProfile) return authProfile.app_role;
   const u = DB.users.find(x=>x.id===DB.activeUser);
   return u ? u.role : 'admin';
 }
@@ -738,7 +767,7 @@ const ALLOWED_TABS_USER = ['dashboard','setup','coa','jurnalkas','jurnalpenjuala
   'jurnal','ledger','labarugi','neraca','aruskas','ekuitas','penyusutan','inventory'];
 const VIEWER_SAFE_ONCLICK = ['switchTab', 'window.print', 'exportJurnalCSV', 'exportLedgerCSV', 'exportLabaRugiCSV',
   'exportNeracaCSV', 'exportArusKasCSV', 'exportEkuitasCSV', 'viewJournal', 'viewInvoice', 'closeModal',
-  'exportBackupJSON', 'printInvoice',
+  'exportBackupJSON', 'printInvoice', 'authLogout',
   "lrView=", "nrView=", "akView=", "ekView="];
 
 /* ---------------- Utilities ---------------- */
@@ -1082,16 +1111,13 @@ function syncYearSwitcher(){
   sel.value = String(DB.activeYear);
 }
 function syncRoleSwitcher(){
-  const sel = document.getElementById('roleSwitcher');
-  if (!sel) return;
+  const el = document.getElementById('roleSwitcher');
+  if (!el) return;
+  if (!authProfile){ el.innerHTML = ''; return; }
   const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
-  const sig = DB.users.map(u=>u.id+':'+u.name+':'+u.role).join(',');
-  if (sel.dataset.sig !== sig){
-    sel.innerHTML = DB.users.map(u=>`<option value="${esc(u.id)}">&#128100; ${esc(u.name)} — ${roleLabel[u.role]||u.role}</option>`).join('');
-    sel.dataset.sig = sig;
-  }
-  if (DB.users.some(u=>u.id===DB.activeUser)) sel.value = DB.activeUser;
-  else if (DB.users[0]) { DB.activeUser = DB.users[0].id; sel.value = DB.activeUser; }
+  el.innerHTML = '<span title="' + esc(authProfile.email||'') + '">&#128100; ' + esc(authProfile.name||authProfile.email||'') +
+    ' &mdash; <strong>' + (roleLabel[authProfile.app_role]||authProfile.app_role) + '</strong></span>' +
+    '<button class="btn btn-outline btn-sm no-print" onclick="authLogout()">Keluar</button>';
 }
 function monthRangeISO(mk){ return {start: mk+'-01', end: lastDayOfMonthISO(mk)}; }
 function fiscalYearBounds(){
@@ -1651,8 +1677,16 @@ function renderSetup(){
           <strong>User</strong> — hanya dapat <strong>melihat</strong> menu Ringkasan, Kode Akun, Jurnal Khusus, Pembukuan, Laporan Keuangan, serta Aset &amp; Persediaan. Semua tombol tambah/ubah/hapus dinonaktifkan — peran ini murni untuk melihat data dan laporan.
         </div>
         ${isOwner()
-          ? `<div class="hint">Untuk menambah/mengubah/menghapus pengguna dan mengatur tahun fiskal, buka menu <strong>Pengaturan Sistem</strong> di sidebar.</div>`
-          : `<div class="hint">Manajemen pengguna dan pengaturan tahun fiskal hanya dapat diakses oleh peran <strong>Owner</strong>, lewat menu "Pengaturan Sistem" (tersembunyi untuk peran Anda saat ini).</div>`}
+          ? `<div class="hint">Untuk menyetujui pendaftar baru, mengubah peran pengguna, dan mengatur tahun fiskal, buka menu <strong>Pengaturan Sistem</strong> di sidebar.</div>`
+          : `<div class="hint">Persetujuan pengguna dan pengaturan tahun fiskal hanya dapat diakses oleh peran <strong>Owner</strong>, lewat menu "Pengaturan Sistem" (tersembunyi untuk peran Anda saat ini).</div>`}
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head"><div><h2>Keamanan Akun</h2><div class="hint">Akun: <strong>${esc((authProfile&&authProfile.email)||'-')}</strong></div></div></div>
+      <div class="section-body">
+        <button class="btn btn-outline" onclick="authLogout()">Keluar</button>
+        <button class="btn btn-danger" onclick="authLogout(true)">Keluar dari Semua Device</button>
+        <div class="hint" style="margin-top:8px;">"Keluar dari Semua Device" mengakhiri sesi di semua perangkat, termasuk yang sedang dipakai sekarang.</div>
       </div>
     </div>
   `);
@@ -1677,8 +1711,7 @@ function renderPengaturan(){
     return;
   }
   const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
-  const ownerCount = DB.users.filter(u=>u.role==='owner').length;
-  const userRows = DB.users.map(u => `
+  const userRows = [].map(u => `
     <tr>
       <td>${esc(u.name)}${u.id===DB.activeUser?' <span class="tag-small">(sedang login)</span>':''}</td>
       <td><span class="pill ${u.role==='owner'?'pill-modal':u.role==='admin'?'pill-aset':u.role==='staff'?'pill-pendapatan':'pill-kewajiban'}">${roleLabel[u.role]||u.role}</span></td>
@@ -1691,18 +1724,10 @@ function renderPengaturan(){
   setContent(`
     <div class="section">
       <div class="section-head">
-        <div><h2>Manajemen Pengguna</h2><div class="hint">Tambah, ubah peran, atau hapus pengguna yang dapat "masuk" ke aplikasi ini (simulasi peran, dipilih lewat dropdown di topbar)</div></div>
-        <button class="btn btn-primary" onclick="openUserModal()">+ Tambah Pengguna</button>
+        <div><h2>Manajemen Pengguna</h2><div class="hint">Setujui atau tolak pendaftar baru, ubah peran, dan nonaktifkan akun. Pendaftar pertama otomatis menjadi Owner.</div></div>
+        <button class="btn btn-outline btn-sm" onclick="authRefreshUsers()">&#8635; Muat Ulang</button>
       </div>
-      <div class="section-body scrollx">
-        <table>
-          <thead><tr><th>Nama</th><th>Peran</th><th class="center">Aksi</th></tr></thead>
-          <tbody>${userRows || `<tr class="empty-row"><td colspan="3">Belum ada pengguna.</td></tr>`}</tbody>
-        </table>
-      </div>
-      <div class="section-body" style="padding-top:0;">
-        <div class="hint">Minimal harus ada 1 pengguna berperan Owner agar menu ini tetap bisa diakses — saat ini ada ${ownerCount} pengguna Owner.</div>
-      </div>
+      <div class="section-body scrollx" id="userMgmt">${authUsersHtml()}</div>
     </div>
     <div class="section">
       <div class="section-head"><div><h2>Tahun Fiskal Perusahaan</h2><div class="hint">Tanggal mulai pembukuan sejak usaha pertama kali berjalan — memengaruhi seluruh perhitungan laporan tahunan</div></div></div>
@@ -1763,7 +1788,7 @@ create policy "allow anon insert" on app_state for insert with check (true);
 create policy "allow anon update" on app_state for update using (true);</textarea>
           <div class="tag-small" style="margin-top:4px;">Klik kotak di atas untuk menyorot semua teks, lalu salin (Ctrl/Cmd+C).</div>
         </div>
-        <div class="balance-check bad" style="margin:12px 0;">&#9888; Kebijakan di atas mengizinkan siapa pun yang memegang "anon key" ini (termasuk siapa saja yang membuka file HTML ini) untuk membaca dan menulis baris data ini. Ini sama seperti model kepercayaan aplikasi ini secara umum (tidak ada login sungguhan) — jangan gunakan anon key dari project Supabase yang juga dipakai untuk data sensitif lain.</div>
+        <div class="balance-check bad" style="margin:12px 0;">&#9888; Data di database dilindungi login (Supabase Auth): hanya akun yang sudah disetujui Owner yang dapat membaca data, dan hanya Owner/Admin/Staff yang dapat menyimpan. Skrip SQL di atas adalah versi dasar lama — di project ini aturan akses sudah diperketat.</div>
         <div class="row">
           <div class="field"><label>Project URL</label><input id="sb_url" placeholder="https://xxxxxxxx.supabase.co" value="${esc(supaConfig.url)}"></div>
           <div class="field"><label>Anon Public Key</label><input id="sb_key" placeholder="eyJhbGciOi..." value="${esc(supaConfig.key)}"></div>
@@ -4588,14 +4613,327 @@ document.addEventListener('click', (e) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSearchResults(); });
 
 /* ---------------- Init ---------------- */
-loadSupaConfig();
-renderCurrent();
-if (supaConfigured()){
-  setSupaStatus('busy', 'Menyambungkan ke Supabase…');
-  supaPull(true).then(function(ok){
-    if (!ok) setSupaStatus('idle', 'Tidak memuat data cloud otomatis (belum ada data tersimpan atau koneksi gagal). Data contoh/lokal tetap dipakai.');
-  });
+
+/* ================= LOGIN & AKUN (Supabase Auth: email + password) =================
+   Alur mengikuti aplikasi kasir: Masuk / Daftar (Karyawan atau Owner) / Lupa Password / Buat Password Baru,
+   serta status akun: Menunggu Persetujuan, Ditolak, Dinonaktifkan. */
+const AUTH_KEY = 'akt_auth_v1';
+
+function actorName(){
+  if (authProfile) return authProfile.name || authProfile.email || 'Pengguna';
+  return (DB.users.find(u=>u.id===DB.activeUser)||{}).name || DB.activeUser;
 }
+function authBase(){ return supaConfig.url.replace(/\/+$/,'') + '/auth/v1'; }
+function authSaveSession(){
+  try { if (authSession) localStorage.setItem(AUTH_KEY, JSON.stringify(authSession)); else localStorage.removeItem(AUTH_KEY); } catch(e){}
+}
+function authLoadSession(){
+  try { const raw = localStorage.getItem(AUTH_KEY); if (raw) authSession = JSON.parse(raw); } catch(e){ authSession = null; }
+}
+function authErrMsg(j, status){
+  const m = String((j && (j.msg || j.error_description || j.message || j.error)) || '');
+  const low = m.toLowerCase();
+  if (low.includes('invalid login')) return 'Email atau password salah.';
+  if (low.includes('not confirmed')) return 'Email belum dikonfirmasi. Cek kotak masuk Anda lalu klik tautan konfirmasi.';
+  if (low.includes('already registered') || low.includes('already been registered')) return 'Email ini sudah terdaftar. Silakan masuk.';
+  if (low.includes('at least') && low.includes('character')) return 'Password minimal 6 karakter.';
+  if (low.includes('valid email') || low.includes('invalid email')) return 'Format email tidak valid.';
+  if (low.includes('rate limit') || status === 429) return 'Terlalu banyak percobaan. Tunggu beberapa saat lalu coba lagi.';
+  if (low.includes('same password')) return 'Password baru harus berbeda dari yang lama.';
+  return m || ('Terjadi kesalahan (HTTP ' + status + ').');
+}
+async function authCall(path, method, body, token){
+  const res = await fetch(authBase() + path, {
+    method: method || 'POST',
+    headers: {'apikey': supaConfig.key, 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || supaConfig.key)},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  let j = {}; try { j = await res.json(); } catch(e){}
+  if (!res.ok) throw new Error(authErrMsg(j, res.status));
+  return j;
+}
+function authStoreTokens(j){
+  authSession = {access_token: j.access_token, refresh_token: j.refresh_token,
+    expires_at: Math.floor(Date.now()/1000) + (j.expires_in || 3600), user: j.user || (authSession && authSession.user) || null};
+  authSaveSession();
+}
+async function authEnsureToken(){
+  if (!authSession) return false;
+  if (authSession.expires_at - 60 > Math.floor(Date.now()/1000)) return true;
+  try {
+    const j = await authCall('/token?grant_type=refresh_token', 'POST', {refresh_token: authSession.refresh_token});
+    authStoreTokens(j);
+    return true;
+  } catch(e){
+    authSession = null; authProfile = null; authSaveSession();
+    renderAuth('login', 'Sesi berakhir. Silakan masuk lagi.', 'err');
+    return false;
+  }
+}
+async function authRest(path, method, body, extraHeaders){
+  await authEnsureToken();
+  const res = await fetch(supaConfig.url.replace(/\/+$/,'') + '/rest/v1/' + path, {
+    method: method || 'GET',
+    headers: supaHeaders(Object.assign({'Prefer':'return=representation'}, extraHeaders || {})),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const t = await res.text();
+  let j = null; try { j = t ? JSON.parse(t) : null; } catch(e){}
+  if (!res.ok) throw new Error((j && (j.message || j.msg)) || ('HTTP ' + res.status));
+  return j;
+}
+
+/* ---------- tampilan layar auth ---------- */
+function authShell(inner){
+  return `<div class="auth-card"><div class="auth-logo">&#9783;</div>${inner}</div>`;
+}
+function renderAuth(view, msg, kind){
+  const el = document.getElementById('authScreen');
+  if (!el) return;
+  el.hidden = false;
+  const m = msg ? `<div class="auth-msg ${kind==='ok'?'ok':'err'}">${esc(msg)}</div>` : '';
+  let html = '';
+  if (view === 'login'){
+    html = authShell(`<h2>Buku Akuntansi</h2><div class="auth-sub">Masuk untuk melanjutkan</div>${m}
+      <form onsubmit="authSubmitLogin(event)">
+        <div class="field"><label>Email</label><input id="au_email" type="email" autocomplete="email" required></div>
+        <div class="field"><label>Password</label><input id="au_pass" type="password" autocomplete="current-password" required></div>
+        <button class="btn btn-primary" type="submit" id="au_btn">Masuk</button>
+      </form>
+      <div class="auth-links"><a onclick="renderAuth('forgot')">Lupa password?</a><span>Belum punya akun? <a onclick="renderAuth('register')">Daftar</a></span></div>`);
+  } else if (view === 'register'){
+    html = authShell(`<h2>Daftar Akun</h2><div class="auth-sub">Akun baru perlu disetujui Owner sebelum bisa dipakai</div>${m}
+      <form onsubmit="authSubmitRegister(event)">
+        <div class="field"><label>Nama Lengkap</label><input id="au_name" required></div>
+        <div class="field"><label>Email</label><input id="au_email" type="email" autocomplete="email" required></div>
+        <div class="field"><label>Password (min. 6 karakter)</label><input id="au_pass" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="field"><label>Daftar sebagai</label>
+          <div class="auth-roles">
+            <label><input type="radio" name="au_role" value="karyawan" checked>Karyawan<small>Bergabung ke usaha yang sudah ada</small></label>
+            <label><input type="radio" name="au_role" value="owner">Owner<small>Pemilik / pengelola usaha</small></label>
+          </div></div>
+        <button class="btn btn-primary" type="submit" id="au_btn">Daftar</button>
+      </form>
+      <div class="auth-links"><a onclick="renderAuth('login')">&larr; Kembali ke Masuk</a></div>`);
+  } else if (view === 'forgot'){
+    html = authShell(`<h2>Lupa Password</h2><div class="auth-sub">Kami kirim tautan untuk membuat password baru</div>${m}
+      <form onsubmit="authSubmitForgot(event)">
+        <div class="field"><label>Email</label><input id="au_email" type="email" required></div>
+        <button class="btn btn-primary" type="submit" id="au_btn">Kirim Tautan Reset</button>
+      </form>
+      <div class="auth-links"><a onclick="renderAuth('login')">&larr; Kembali ke Masuk</a></div>`);
+  } else if (view === 'reset'){
+    html = authShell(`<h2>Buat Password Baru</h2><div class="auth-sub">Masukkan password baru untuk akun Anda</div>${m}
+      <form onsubmit="authSubmitReset(event)">
+        <div class="field"><label>Password Baru</label><input id="au_pass" type="password" minlength="6" autocomplete="new-password" required></div>
+        <div class="field"><label>Ulangi Password</label><input id="au_pass2" type="password" minlength="6" autocomplete="new-password" required></div>
+        <button class="btn btn-primary" type="submit" id="au_btn">Simpan Password</button>
+      </form>
+      <div class="auth-links"><a onclick="authResetCancel()">&larr; Kembali ke Masuk</a></div>`);
+  } else if (view === 'pending'){
+    html = authShell(`<div class="auth-status-ico">&#9203;</div><h2>Menunggu Persetujuan</h2>
+      <div class="auth-sub">Akun <strong>${esc((authProfile&&authProfile.email)||'')}</strong> sudah terdaftar. Owner perlu menyetujuinya sebelum Anda bisa masuk.</div>${m}
+      <button class="btn btn-primary" onclick="authCheckStatus()">Cek Status Lagi</button>
+      <div class="auth-links" style="justify-content:center;"><a onclick="authLogout()">Keluar</a></div>`);
+  } else if (view === 'rejected'){
+    html = authShell(`<div class="auth-status-ico">&#128683;</div><h2>Pendaftaran Ditolak</h2>
+      <div class="auth-sub">Pendaftaran akun ini ditolak. Silakan hubungi pemilik aplikasi.</div>${m}
+      <button class="btn btn-outline" onclick="authLogout()">Keluar</button>`);
+  } else if (view === 'inactive'){
+    html = authShell(`<div class="auth-status-ico">&#128274;</div><h2>Akun Dinonaktifkan</h2>
+      <div class="auth-sub">Akun kamu telah dinonaktifkan oleh pemilik aplikasi.</div>${m}
+      <button class="btn btn-outline" onclick="authLogout()">Keluar</button>`);
+  } else {
+    html = authShell(`<div style="text-align:center;color:var(--ink-soft);padding:20px 0;">${esc(msg||'Memuat…')}</div>`);
+  }
+  el.innerHTML = html;
+  const first = el.querySelector('input'); if (first && first.type !== 'radio') { try { first.focus(); } catch(e){} }
+}
+function authBusy(on){ const b = document.getElementById('au_btn'); if (b){ b.disabled = on; if (on) b.dataset.t = b.textContent, b.textContent = 'Mohon tunggu…'; else if (b.dataset.t) b.textContent = b.dataset.t; } }
+
+/* ---------- aksi ---------- */
+async function authSubmitLogin(ev){
+  ev.preventDefault();
+  const email = document.getElementById('au_email').value.trim();
+  const pass = document.getElementById('au_pass').value;
+  authBusy(true);
+  try {
+    const j = await authCall('/token?grant_type=password', 'POST', {email, password: pass});
+    authStoreTokens(j);
+    await authAfterLogin();
+  } catch(e){ renderAuth('login', e.message, 'err'); }
+}
+async function authSubmitRegister(ev){
+  ev.preventDefault();
+  const name = document.getElementById('au_name').value.trim();
+  const email = document.getElementById('au_email').value.trim();
+  const pass = document.getElementById('au_pass').value;
+  const role = (document.querySelector('input[name="au_role"]:checked')||{}).value || 'karyawan';
+  authBusy(true);
+  try {
+    const j = await authCall('/signup', 'POST', {email, password: pass, data: {name, requested_role: role}});
+    if (j.access_token){ authStoreTokens(j); await authAfterLogin(); return; }
+    // identitas sudah ada (email terdaftar) → Supabase mengembalikan user tanpa identities
+    if (j.user && Array.isArray(j.user.identities) && !j.user.identities.length){ renderAuth('login', 'Email ini sudah terdaftar. Silakan masuk.', 'err'); return; }
+    renderAuth('login', 'Pendaftaran berhasil. Cek email Anda untuk konfirmasi (jika diminta), lalu masuk.', 'ok');
+  } catch(e){ renderAuth('register', e.message, 'err'); }
+}
+async function authSubmitForgot(ev){
+  ev.preventDefault();
+  const email = document.getElementById('au_email').value.trim();
+  authBusy(true);
+  try {
+    const redirect = (location.protocol.indexOf('http') === 0) ? '?redirect_to=' + encodeURIComponent(location.origin + location.pathname) : '';
+    await authCall('/recover' + redirect, 'POST', {email});
+    renderAuth('login', 'Jika email terdaftar, tautan reset password sudah dikirim. Cek kotak masuk Anda.', 'ok');
+  } catch(e){ renderAuth('forgot', e.message, 'err'); }
+}
+async function authSubmitReset(ev){
+  ev.preventDefault();
+  const p1 = document.getElementById('au_pass').value, p2 = document.getElementById('au_pass2').value;
+  if (p1 !== p2){ renderAuth('reset', 'Kedua password tidak sama.', 'err'); return; }
+  authBusy(true);
+  try {
+    await authCall('/user', 'PUT', {password: p1}, authRecoveryToken);
+    authRecoveryToken = null;
+    authSession = null; authSaveSession();
+    renderAuth('login', 'Password berhasil diubah. Silakan masuk dengan password baru.', 'ok');
+  } catch(e){ renderAuth('reset', e.message, 'err'); }
+}
+function authResetCancel(){ authRecoveryToken = null; renderAuth('login'); }
+async function authAfterLogin(){
+  renderAuth('loading', 'Memeriksa akun…');
+  try {
+    const md = (authSession && authSession.user && authSession.user.user_metadata) || {};
+    const prof = await authRest('rpc/akt_ensure_profile', 'POST', {p_name: md.name || '', p_requested_role: md.requested_role || 'karyawan'});
+    authProfile = Array.isArray(prof) ? prof[0] : prof;
+  } catch(e){
+    authSession = null; authProfile = null; authSaveSession();
+    renderAuth('login', 'Gagal memuat profil akun: ' + e.message, 'err');
+    return;
+  }
+  authEnterApp();
+}
+async function authCheckStatus(){
+  try {
+    const rows = await authRest('akt_profiles?id=eq.' + encodeURIComponent(authSession.user.id) + '&select=*');
+    if (rows && rows[0]) authProfile = rows[0];
+  } catch(e){ renderAuth(authProfile ? authProfile.status : 'pending', 'Gagal memeriksa status: ' + e.message, 'err'); return; }
+  authEnterApp();
+}
+function authEnterApp(){
+  const st = authProfile && authProfile.status;
+  if (st === 'approved'){
+    document.getElementById('authScreen').hidden = true;
+    renderCurrent();
+    if (supaConfigured()){
+      setSupaStatus('busy', 'Menyambungkan ke Supabase…');
+      supaPull(true).then(function(ok){
+        if (!ok) setSupaStatus('idle', 'Tidak memuat data cloud otomatis (belum ada data tersimpan atau koneksi gagal). Data contoh/lokal tetap dipakai.');
+      });
+    }
+  } else if (st === 'rejected') renderAuth('rejected');
+  else if (st === 'inactive') renderAuth('inactive');
+  else renderAuth('pending');
+}
+async function authLogout(everywhere){
+  if (everywhere && !confirm('Keluar dari SEMUA device? Anda juga akan keluar dari perangkat ini dan harus masuk lagi.')) return;
+  try { if (authSession) await authCall('/logout?scope=' + (everywhere ? 'global' : 'local'), 'POST', null, authSession.access_token); } catch(e){}
+  authSession = null; authProfile = null; authUsers = null; authSaveSession();
+  renderAuth('login');
+}
+
+/* ---------- Manajemen pengguna (Owner) ---------- */
+function authStatusPill(st){
+  const map = {approved:['pill-ok','Aktif'], pending:['pill-warn','Menunggu'], rejected:['pill-beban','Ditolak'], inactive:['pill-kewajiban','Nonaktif']};
+  const x = map[st] || ['', st]; return `<span class="pill ${x[0]}">${x[1]}</span>`;
+}
+let authUsersT = 0;
+function authUsersHtml(){
+  if (!authUsersT || Date.now() - authUsersT > 5000){ authUsersT = Date.now(); setTimeout(authRefreshUsers, 0); }
+  if (!authUsers) return '<div class="hint">Memuat daftar pengguna…</div>';
+  if (!authUsers.length) return '<div class="hint">Belum ada pengguna.</div>';
+  const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
+  const rows = authUsers.slice().sort((a,b)=> (a.status==='pending'?-1:0) - (b.status==='pending'?-1:0) || String(a.created_at).localeCompare(String(b.created_at))).map(u => {
+    const me = authProfile && u.id === authProfile.id;
+    let act = '';
+    if (me) act = '<span class="tag-small">(Anda)</span>';
+    else if (u.status === 'pending') act = `<button class="btn btn-primary btn-sm" onclick="authOpenApprove('${u.id}')">Setujui</button> <button class="btn btn-danger btn-sm" onclick="authSetStatus('${u.id}','rejected')">Tolak</button>`;
+    else if (u.status === 'approved') act = `<button class="btn btn-outline btn-sm" onclick="authOpenApprove('${u.id}')">Ubah Peran</button> <button class="btn btn-danger btn-sm" onclick="authSetStatus('${u.id}','inactive')">Nonaktifkan</button>`;
+    else act = `<button class="btn btn-outline btn-sm" onclick="authOpenApprove('${u.id}')">Aktifkan</button>`;
+    return `<tr><td>${esc(u.name||'-')}<div class="tag-small">${esc(u.email||'')}</div></td>
+      <td>${u.requested_role==='owner'?'Owner':'Karyawan'}</td>
+      <td>${u.status==='approved' ? (roleLabel[u.app_role]||u.app_role) : '-'}</td>
+      <td class="center">${authStatusPill(u.status)}</td><td class="center">${act}</td></tr>`;
+  }).join('');
+  return `<table><thead><tr><th>Pengguna</th><th>Mendaftar sebagai</th><th>Peran</th><th class="center">Status</th><th class="center">Aksi</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+async function authRefreshUsers(){
+  if (!isOwner()) return;
+  try { authUsers = await authRest('akt_profiles?select=*&order=created_at.asc'); }
+  catch(e){ authUsers = []; alert('Gagal memuat pengguna: ' + e.message); }
+  const el = document.getElementById('userMgmt'); if (el) el.innerHTML = authUsersHtml();
+}
+function authOpenApprove(id){
+  if (!isOwner()) return;
+  const u = (authUsers||[]).find(x=>x.id===id); if (!u) return;
+  const cur = u.status==='approved' ? u.app_role : (u.requested_role==='owner' ? 'admin' : 'staff');
+  const body = `<div class="hint" style="margin-bottom:10px;">${esc(u.name||'')} &mdash; ${esc(u.email||'')}</div>
+    <div class="field"><label>Peran</label><select id="um_role">
+      <option value="owner" ${cur==='owner'?'selected':''}>Owner — akses penuh + Pengaturan Sistem</option>
+      <option value="admin" ${cur==='admin'?'selected':''}>Admin — akses penuh operasional</option>
+      <option value="staff" ${cur==='staff'?'selected':''}>Staff — input transaksi, perlu persetujuan</option>
+      <option value="user" ${cur==='user'?'selected':''}>User — hanya melihat</option></select></div>`;
+  const foot = `<button class="btn btn-outline" onclick="closeModal()">Batal</button>
+    <button class="btn btn-primary" onclick="authApprove('${id}')">Simpan &amp; Aktifkan</button>`;
+  openModal(u.status==='approved' ? 'Ubah Peran' : 'Setujui Pengguna', body, foot);
+}
+async function authApprove(id){
+  const role = document.getElementById('um_role').value;
+  await authPatchUser(id, {status:'approved', app_role: role}, 'Setujui/ubah peran → ' + roleLabelFor(role));
+  closeModal();
+}
+async function authSetStatus(id, status){
+  const u = (authUsers||[]).find(x=>x.id===id); if (!u) return;
+  const txt = {rejected:'Tolak pendaftaran', inactive:'Nonaktifkan akun'}[status] || status;
+  if (!confirm(txt + ' "' + (u.name||u.email) + '"?')) return;
+  await authPatchUser(id, {status}, txt);
+}
+async function authPatchUser(id, patch, label){
+  if (!isOwner()) return;
+  if (authProfile && id === authProfile.id){ alert('Anda tidak dapat mengubah akun Anda sendiri.'); return; }
+  try {
+    await authRest('akt_profiles?id=eq.' + encodeURIComponent(id), 'PATCH', patch);
+    const u = (authUsers||[]).find(x=>x.id===id);
+    logAuditSilent('Pengguna', (u&&(u.name||u.email))||id, label);
+    await authRefreshUsers();
+  } catch(e){ alert('Gagal menyimpan: ' + e.message); }
+}
+
+/* ================= Init ================= */
+loadSupaConfig();
+authLoadSession();
+(function authBoot(){
+  // Tautan reset password dari email: #access_token=...&type=recovery
+  const h = (location.hash || '').replace(/^#/, '');
+  if (h){
+    const q = new URLSearchParams(h);
+    if (q.get('type') === 'recovery' && q.get('access_token')){
+      authRecoveryToken = q.get('access_token');
+      try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+      renderAuth('reset');
+      return;
+    }
+    if (q.get('error_description')){
+      const msg = q.get('error_description').replace(/\+/g,' ');
+      try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+      renderAuth('login', 'Tautan tidak valid atau sudah kedaluwarsa. ' + msg, 'err');
+      return;
+    }
+  }
+  if (authSession){ authEnsureToken().then(function(ok){ if (ok) authAfterLogin(); }); }
+  else renderAuth('login');
+})();
 
 // Peringatkan sebelum menutup/memuat ulang tab bila ada perubahan yang belum dibackup.
 // Ini API browser bawaan (bukan localStorage) sehingga aman dipakai di lingkungan mana pun.
