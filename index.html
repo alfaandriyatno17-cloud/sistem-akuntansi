@@ -1581,7 +1581,7 @@ function renderDashboard(){
   const recent = activeJournal().slice().sort((a,b)=> (b.date+b.no) > (a.date+a.no) ? 1 : -1).slice(0,6);
   const pendingCount = DB.journal.filter(j=>!j.deleted && j.status==='pending').length;
 
-  const cards = `
+  const cards = `${authPendingBannerHtml()}
     <div class="cards">
       <div class="card"><div class="label">Total Aset</div><div class="value">${fmtRp(nr.totalAset)}</div></div>
       <div class="card"><div class="label">Total Kewajiban + Modal</div><div class="value">${fmtRp(nr.totalKM)}</div></div>
@@ -1727,6 +1727,7 @@ function renderPengaturan(){
         <div><h2>Manajemen Pengguna</h2><div class="hint">Setujui atau tolak pendaftar baru, ubah peran, dan nonaktifkan akun. Pendaftar pertama otomatis menjadi Owner.</div></div>
         <button class="btn btn-outline btn-sm" onclick="authRefreshUsers()">&#8635; Muat Ulang</button>
       </div>
+      ${authPendingCount ? `<div class="section-body" style="padding-bottom:0;"><div class="balance-check bad">&#128276; ${authPendingCount} pendaftar menunggu persetujuan. Klik <strong>Setujui</strong> atau <strong>Tolak</strong> pada baris berstatus Menunggu.</div></div>` : ""}
       <div class="section-body scrollx" id="userMgmt">${authUsersHtml()}</div>
     </div>
     <div class="section">
@@ -4826,6 +4827,7 @@ function authEnterApp(){
   if (st === 'approved'){
     document.getElementById('authScreen').hidden = true;
     renderCurrent();
+    authStartPolling();
     if (supaConfigured()){
       setSupaStatus('busy', 'Menyambungkan ke Supabase…');
       supaPull(true).then(function(ok){
@@ -4839,7 +4841,8 @@ function authEnterApp(){
 async function authLogout(everywhere){
   if (everywhere && !confirm('Keluar dari SEMUA device? Anda juga akan keluar dari perangkat ini dan harus masuk lagi.')) return;
   try { if (authSession) await authCall('/logout?scope=' + (everywhere ? 'global' : 'local'), 'POST', null, authSession.access_token); } catch(e){}
-  authSession = null; authProfile = null; authUsers = null; authSaveSession();
+  authSession = null; authProfile = null; authUsers = null; authPendingCount = 0; authSaveSession();
+  if (authPollTimer){ clearInterval(authPollTimer); authPollTimer = null; }
   renderAuth('login');
 }
 
@@ -4872,6 +4875,8 @@ async function authRefreshUsers(){
   if (!isOwner()) return;
   try { authUsers = await authRest('akt_profiles?select=*&order=created_at.asc'); }
   catch(e){ authUsers = []; alert('Gagal memuat pengguna: ' + e.message); }
+  authPendingCount = (authUsers||[]).filter(u=>u.status==='pending').length;
+  authUpdatePendingBadge();
   const el = document.getElementById('userMgmt'); if (el) el.innerHTML = authUsersHtml();
 }
 function authOpenApprove(id){
@@ -4910,6 +4915,39 @@ async function authPatchUser(id, patch, label){
   } catch(e){ alert('Gagal menyimpan: ' + e.message); }
 }
 
+let authPendingCount = 0;
+let authPollTimer = null;
+function authPendingBannerHtml(){
+  if (!isOwner() || !authPendingCount) return '';
+  return `<div class="balance-check bad" style="margin-bottom:12px;">&#128276; ${authPendingCount} pendaftar baru menunggu persetujuan Anda &mdash; <a href="#" onclick="switchTab('pengaturan'); return false;" style="color:inherit; font-weight:700; text-decoration:underline;">Tinjau sekarang</a></div>`;
+}
+function authUpdatePendingBadge(){
+  const btn = document.querySelector('button[data-tab="pengaturan"] .lbl');
+  if (!btn) return;
+  const old = btn.querySelector('.pend-badge'); if (old) old.remove();
+  if (isOwner() && authPendingCount){
+    const b = document.createElement('span');
+    b.className = 'pend-badge'; b.textContent = authPendingCount;
+    b.style.cssText = 'margin-left:8px; background:#C0392B; color:#fff; border-radius:10px; padding:1px 7px; font-size:11px; font-weight:700;';
+    btn.appendChild(b);
+  }
+}
+async function authPollPending(){
+  if (!isOwner() || !authSession) return;
+  try {
+    const rows = await authRest('akt_profiles?status=eq.pending&select=id');
+    const n = (rows||[]).length;
+    const changed = n !== authPendingCount;
+    authPendingCount = n;
+    authUpdatePendingBadge();
+    if (changed && currentTab === 'dashboard') renderCurrent();
+  } catch(e){}
+}
+function authStartPolling(){
+  if (authPollTimer) clearInterval(authPollTimer);
+  authPollPending();
+  authPollTimer = setInterval(authPollPending, 60000);
+}
 /* ================= Init ================= */
 loadSupaConfig();
 authLoadSession();
