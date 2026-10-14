@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Buku Akuntansi — Sistem Pembukuan Sederhana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --navy-950:#0C1B2E;
@@ -345,25 +347,62 @@
     .panel.print-active{display:block !important;}
   }
 
-  /* ===== Layar Login / Auth ===== */
-  #authScreen{position:fixed; inset:0; z-index:1000; background:linear-gradient(160deg,var(--navy-950),var(--navy-800)); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto;}
+  /* ===== Layar Login / Pilih Perusahaan (gaya sistem kasir) ===== */
+  #authScreen{position:fixed; inset:0; z-index:1000; background:#FBF6EE; display:flex; align-items:flex-start; justify-content:center; padding:64px 18px 24px; overflow-y:auto; font-family:'Inter',var(--sans);}
   #authScreen[hidden]{display:none;}
-  .auth-card{background:#fff; width:100%; max-width:400px; border-radius:12px; padding:28px 26px; box-shadow:0 24px 60px rgba(0,0,0,.35);}
-  .auth-logo{width:46px; height:46px; border-radius:12px; background:var(--navy-800); color:#fff; display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-size:22px; margin:0 auto 10px;}
-  .auth-card h2{margin:0 0 4px; text-align:center; font-family:var(--serif); font-size:20px;}
-  .auth-card .auth-sub{text-align:center; color:var(--ink-soft); font-size:13px; margin-bottom:18px;}
+  .auth-card{position:relative; background:#fff; width:100%; max-width:380px; border-radius:16px; border:1px solid #E9DFC8; padding:30px 28px 26px; box-shadow:0 10px 30px rgba(120,90,30,.10);}
+  .auth-card.wide{max-width:820px;}
+  @media (max-width:640px){
+    .auth-card.wide{padding:24px 18px;}
+    .auth-mgmt table, .auth-mgmt tbody, .auth-mgmt tr, .auth-mgmt td{display:block; width:100%;}
+    .auth-mgmt thead{display:none;}
+    .auth-mgmt tr{border:1px solid #E9DFC8; border-radius:12px; padding:10px 12px; margin-bottom:10px;}
+    .auth-mgmt td{border:0 !important; padding:3px 0 !important;}
+    .auth-mgmt td[data-l]::before{content:attr(data-l) ': '; color:#6B7280; font-size:12px;}
+    .auth-mgmt td:last-child{padding-top:8px !important;}
+  }
+  .auth-card::before{content:''; position:absolute; left:26px; right:26px; top:-1px; height:9px; background:radial-gradient(circle at 50% 0, #FBF6EE 5.5px, transparent 6px) 0 0/14px 9px repeat-x;}
+  .auth-card h2{margin:0 0 4px; font-family:'Fraunces',Georgia,serif; font-weight:800; font-size:26px; color:#14213D; letter-spacing:-.01em;}
+  .auth-card .auth-sub{color:#4A5568; font-size:13.5px; margin-bottom:18px; line-height:1.45;}
   .auth-card .field{margin-bottom:12px;}
-  .auth-card .btn{width:100%; justify-content:center; padding:10px 12px; font-size:14px;}
-  .auth-msg{font-size:12.5px; padding:9px 11px; border-radius:6px; margin-bottom:12px;}
-  .auth-msg.err{background:var(--rust-bg); color:var(--rust);}
-  .auth-msg.ok{background:var(--green-bg); color:var(--green);}
-  .auth-links{display:flex; justify-content:space-between; font-size:12.5px; margin-top:14px;}
-  .auth-links a{color:var(--navy-700); cursor:pointer; text-decoration:underline;}
+  .auth-card .field label{font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#4A5568;}
+  .auth-card input[type=text], .auth-card input[type=email], .auth-card input[type=password], .auth-card select{width:100%; border:1px solid #E5D9BD; border-radius:10px; padding:11px 12px; font-size:14px; font-family:inherit; background:#fff;}
+  .auth-card input:focus, .auth-card select:focus{outline:2px solid #E8A23C55; border-color:#E8A23C;}
+  .auth-card .btn{box-sizing:border-box; width:100%; justify-content:center; padding:11px 12px; font-size:14px; border-radius:10px; font-weight:700; font-family:inherit;}
+  .auth-card .btn-primary{background:#E8A23C; color:#1B2433; border:1px solid #E8A23C;}
+  .auth-card .btn-primary:hover{background:#DD9628;}
+  .auth-card .btn-outline{background:#fff; color:#14213D; border:1px solid #E5D9BD;}
+  .auth-card .btn-sm{width:auto; padding:5px 10px; font-size:12px; border-radius:8px;}
+  .auth-card .btn-danger{background:#fff; color:#B23A2A; border:1px solid #E7B7AE;}
+  .auth-msg{font-size:12.5px; padding:9px 11px; border-radius:8px; margin-bottom:12px;}
+  .auth-msg.err{background:#FBEAE3; color:#9C4221;}
+  .auth-msg.ok{background:#E7F3EC; color:#276749;}
+  .auth-links{display:flex; justify-content:space-between; font-size:12.5px; margin-top:14px; color:#4A5568;}
+  .auth-links a, .auth-amber{color:#C97A1E; cursor:pointer; font-weight:700; text-decoration:none;}
   .auth-roles{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
-  .auth-roles label{border:1px solid var(--line); border-radius:8px; padding:9px 10px; cursor:pointer; font-size:12.5px; display:block;}
-  .auth-roles label input{width:auto; margin-right:6px;}
-  .auth-roles label small{display:block; color:var(--ink-soft); margin-top:2px;}
-  .auth-status-ico{font-size:34px; text-align:center; margin-bottom:6px;}
+  .auth-roles label{border:1px solid #E5D9BD; border-radius:10px; padding:9px 10px; cursor:pointer; font-size:12.5px; display:block; text-transform:none; letter-spacing:0; font-weight:600; color:#14213D;}
+  .auth-roles label input{width:auto !important; margin-right:6px;}
+  .auth-roles label small{display:block; color:#6B7280; margin-top:2px; font-weight:400;}
+  .auth-status-ico{font-size:34px; margin-bottom:6px;}
+  .auth-co{display:flex; justify-content:space-between; align-items:center; width:100%; text-align:left; background:#fff; border:1px solid #E5D9BD; border-radius:12px; padding:13px 16px; margin-bottom:10px; cursor:pointer; font-family:inherit; color:#14213D;}
+  .auth-co:hover{border-color:#E8A23C; background:#FFFBF2;}
+  .auth-co b{display:block; font-size:15px;}
+  .auth-co small{color:#4A5568; font-size:12px;}
+  .auth-co .arr{font-size:20px;}
+  .auth-hr{border:0; border-top:1px solid #EADFC6; margin:16px 0;}
+  .auth-sec{font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:#4A5568; margin-bottom:8px;}
+  .auth-center{text-align:center; font-size:13px; margin-top:12px; color:#4A5568;}
+  .auth-center div{margin-top:8px;}
+  .auth-mgmt table{width:100%; border-collapse:collapse; font-size:13px;}
+  .auth-mgmt th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#6B7280; text-align:left; padding:6px 8px; border-bottom:1px solid #EADFC6;}
+  .auth-mgmt td{padding:10px 8px; border-bottom:1px solid #F1E9D6; vertical-align:top;}
+  .auth-mgmt .acc{display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:6px;}
+  .auth-mgmt .chip{background:#FFF4DC; border:1px solid #F0DCAA; border-radius:14px; padding:2px 4px 2px 10px; font-size:12px;}
+  .auth-mgmt .chip button{border:0; background:transparent; cursor:pointer; color:#9C4221; font-size:14px;}
+  .auth-mgmt select{width:auto !important; padding:5px 8px !important; font-size:12px !important;}
+  .auth-pill{display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:10px;}
+  .auth-pill.ok{background:#E7F3EC; color:#276749;} .auth-pill.wait{background:#FFF4DC; color:#8A6D1D;}
+  .auth-pill.no{background:#FBEAE3; color:#9C4221;} .auth-pill.off{background:#ECEFF3; color:#4A5568;}
 </style>
 </head>
 <body>
@@ -476,8 +515,9 @@
 /* status login (dideklarasikan paling awal agar aman dipakai fungsi lain saat inisialisasi) */
 let authSession = null;   // {access_token, refresh_token, expires_at, user}
 let authProfile = null;   // baris akt_profiles milik pengguna yang login
-let authUsers = null;     // daftar semua profil (khusus Owner)
 let authRecoveryToken = null;
+let authCompany = null;   // {id, name, role} perusahaan yang sedang dibuka
+const SYS_OWNER_EMAIL = 'alfaandriyatno17@gmail.com';
 /* ============================================================
    BUKU AKUNTANSI — Aplikasi pembukuan sederhana (single file)
    Data disimpan in-memory selama sesi berjalan di peramban.
@@ -592,6 +632,8 @@ let supaConfig = {url:'https://nxtxsbyofdmlgacetqxm.supabase.co', key:'sb_publis
 let supaStatus = {state:'idle', message:'Belum terhubung ke Supabase.'}; // state: idle|ok|error|busy
 let supaAutoSync = true;
 let supaSyncTimer = null;
+let supaVersion = null;        // updated_at terakhir yang kita ketahui di cloud (pengaman agar tidak menimpa perubahan orang lain)
+let supaConflictOpen = false;
 
 function loadSupaConfig(){
   try {
@@ -640,22 +682,41 @@ async function supaTestConnection(){
   }
 }
 async function supaPush(silent){
+  // Pengaman: hanya boleh menyimpan ke perusahaan yang sedang dibuka, dan hanya bila perannya boleh menulis.
+  // Mencegah data contoh/kosong menimpa data perusahaan lain di cloud.
+  if (!authCompany || supaConfig.rowId !== authCompany.id || ['owner','admin','staff'].indexOf(authCompany.role) < 0) return false;
   await authEnsureToken();
   if (!supaConfigured()){ if(!silent) alert('Lengkapi dulu Pengaturan Supabase di menu Pengaturan Sistem.'); return false; }
   if (!silent) setSupaStatus('busy', 'Menyimpan ke cloud…');
   try {
     const snapshot = {};
     BACKUP_KEYS.forEach(k => { snapshot[k] = DB[k]; });
-    const url = supaConfig.url.replace(/\/+$/,'') + '/rest/v1/' + encodeURIComponent(supaConfig.table) + '?on_conflict=id';
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: supaHeaders({'Prefer': 'resolution=merge-duplicates,return=minimal'}),
-      body: JSON.stringify({id: supaConfig.rowId, data: snapshot, updated_at: new Date().toISOString()})
-    });
+    const base = supaConfig.url.replace(/\/+$/,'') + '/rest/v1/' + encodeURIComponent(supaConfig.table);
+    const nowIso = new Date().toISOString();
+    let res;
+    if (supaVersion){
+      // simpan HANYA bila versi di cloud masih sama dengan yang terakhir kita lihat
+      res = await fetch(base + '?id=eq.' + encodeURIComponent(supaConfig.rowId) + '&updated_at=eq.' + encodeURIComponent(supaVersion) + '&select=updated_at', {
+        method: 'PATCH',
+        headers: supaHeaders({'Prefer': 'return=representation'}),
+        body: JSON.stringify({data: snapshot, updated_at: nowIso})
+      });
+      if (res.ok){
+        const upd = await res.json();
+        if (!upd.length){ await supaHandleConflict(); return false; }
+      }
+    } else {
+      res = await fetch(base + '?on_conflict=id', {
+        method: 'POST',
+        headers: supaHeaders({'Prefer': 'resolution=merge-duplicates,return=minimal'}),
+        body: JSON.stringify({id: supaConfig.rowId, data: snapshot, updated_at: nowIso})
+      });
+    }
     if (!res.ok){
       const t = await res.text();
       throw new Error('HTTP ' + res.status + ' — ' + t.slice(0,200));
     }
+    supaVersion = nowIso;
     unsavedChangeCount = 0;
     const badge = document.getElementById('unsavedBadge'); if (badge) badge.textContent = '';
     setSupaStatus('ok', 'Tersimpan ke cloud pada ' + new Date().toLocaleString('id-ID') + '.');
@@ -665,6 +726,24 @@ async function supaPush(silent){
     setSupaStatus('error', 'Gagal menyimpan ke cloud: ' + e.message);
     return false;
   }
+}
+async function supaHandleConflict(){
+  if (supaConflictOpen) return;
+  supaConflictOpen = true;
+  try {
+    if (supaSyncTimer){ clearTimeout(supaSyncTimer); supaSyncTimer = null; }
+    setSupaStatus('error', 'Data di cloud sudah diubah oleh pengguna lain sejak Anda membukanya.');
+    const overwrite = confirm('Data perusahaan ini sudah diubah oleh pengguna lain sejak Anda membukanya.\n\nOK = TIMPA dengan data Anda (perubahan orang lain akan hilang)\nBatal = MUAT data terbaru dari cloud (perubahan Anda yang belum tersimpan akan hilang)');
+    if (overwrite){
+      const r = await fetch(supaConfig.url.replace(/\/+$/,'') + '/rest/v1/' + encodeURIComponent(supaConfig.table) + '?id=eq.' + encodeURIComponent(supaConfig.rowId) + '&select=updated_at&limit=1', {headers: supaHeaders()});
+      const rows = r.ok ? await r.json() : [];
+      supaVersion = rows.length ? rows[0].updated_at : null;
+      supaConflictOpen = false;
+      await supaPush(true);
+    } else {
+      await supaPull(true);
+    }
+  } finally { supaConflictOpen = false; }
 }
 async function supaPull(silent){
   await authEnsureToken();
@@ -690,6 +769,7 @@ async function supaPull(silent){
     }
     if (!silent && !confirm('Memuat dari cloud akan MENGGANTI seluruh data yang sedang berjalan sekarang. Lanjutkan?')) return false;
     BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = data[k]; });
+    supaVersion = rows[0].updated_at;
     unsavedChangeCount = 0;
     setSupaStatus('ok', 'Dimuat dari cloud — terakhir disimpan ' + new Date(rows[0].updated_at).toLocaleString('id-ID') + '.');
     logAuditSilent('Cloud', 'Muat dari Supabase', 'ID: ' + supaConfig.rowId);
@@ -702,6 +782,7 @@ async function supaPull(silent){
 }
 function scheduleAutoSync(){
   if (!supaAutoSync || !supaConfigured()) return;
+  if (!authCompany || ['owner','admin','staff'].indexOf(authCompany.role) < 0) return;
   if (supaSyncTimer) clearTimeout(supaSyncTimer);
   supaSyncTimer = setTimeout(() => { supaPush(true); }, 3000);
 }
@@ -710,7 +791,7 @@ function saveSupaSettings(){
   supaConfig.url = document.getElementById('sb_url').value.trim();
   supaConfig.key = document.getElementById('sb_key').value.trim();
   supaConfig.table = document.getElementById('sb_table').value.trim() || 'app_state';
-  supaConfig.rowId = document.getElementById('sb_rowid').value.trim();
+  supaConfig.rowId = authCompany ? authCompany.id : document.getElementById('sb_rowid').value.trim();
   supaAutoSync = document.getElementById('sb_autosync').checked;
   persistSupaConfig();
   setSupaStatus('idle', 'Pengaturan disimpan. Klik "Uji Koneksi" untuk memastikan semuanya benar.');
@@ -755,7 +836,8 @@ function redoLastAction(){
 }
 
 function currentRole(){
-  if (authProfile) return authProfile.app_role;
+  if (authCompany) return authCompany.role;
+  if (authProfile) return 'user';
   const u = DB.users.find(x=>x.id===DB.activeUser);
   return u ? u.role : 'admin';
 }
@@ -767,7 +849,7 @@ const ALLOWED_TABS_USER = ['dashboard','setup','coa','jurnalkas','jurnalpenjuala
   'jurnal','ledger','labarugi','neraca','aruskas','ekuitas','penyusutan','inventory'];
 const VIEWER_SAFE_ONCLICK = ['switchTab', 'window.print', 'exportJurnalCSV', 'exportLedgerCSV', 'exportLabaRugiCSV',
   'exportNeracaCSV', 'exportArusKasCSV', 'exportEkuitasCSV', 'viewJournal', 'viewInvoice', 'closeModal',
-  'exportBackupJSON', 'printInvoice', 'authLogout',
+  'exportBackupJSON', 'printInvoice', 'authLogout', 'authSwitchCompany', 'authOpenManage',
   "lrView=", "nrView=", "akView=", "ekView="];
 
 /* ---------------- Utilities ---------------- */
@@ -1110,13 +1192,16 @@ function syncYearSwitcher(){
   }
   sel.value = String(DB.activeYear);
 }
+function isSysOwner(){ return !!(authProfile && String(authProfile.email||'').toLowerCase() === SYS_OWNER_EMAIL); }
 function syncRoleSwitcher(){
   const el = document.getElementById('roleSwitcher');
   if (!el) return;
   if (!authProfile){ el.innerHTML = ''; return; }
   const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
   el.innerHTML = '<span title="' + esc(authProfile.email||'') + '">&#128100; ' + esc(authProfile.name||authProfile.email||'') +
-    ' &mdash; <strong>' + (roleLabel[authProfile.app_role]||authProfile.app_role) + '</strong></span>' +
+    (authCompany ? ' &mdash; <strong>' + esc(authCompany.name) + '</strong> (' + (roleLabel[authCompany.role]||authCompany.role) + ')' : '') + '</span>' +
+    '<button class="btn btn-outline btn-sm no-print" onclick="authSwitchCompany()">Ganti Perusahaan</button>' +
+    (isSysOwner() ? '<button class="btn btn-outline btn-sm no-print" onclick="authOpenManage()">Kelola Pengguna</button>' : '') +
     '<button class="btn btn-outline btn-sm no-print" onclick="authLogout()">Keluar</button>';
 }
 function monthRangeISO(mk){ return {start: mk+'-01', end: lastDayOfMonthISO(mk)}; }
@@ -1404,7 +1489,7 @@ const TAB_META = {
   auditlog: {title:'Audit Log', desc:'Riwayat aktivitas: siapa mengubah apa dan kapan'},
   trash: {title:'Riwayat Terhapus', desc:'Jurnal yang dihapus — dapat dipulihkan sebelum dihapus permanen'},
   cabang: {title:'Cabang / Gudang', desc:'Kelola daftar cabang atau gudang untuk pelaporan tersegmentasi'},
-  pengaturan: {title:'Pengaturan Sistem', desc:'Manajemen pengguna & peran, serta tutup/buka tahun fiskal — khusus Owner'}
+  pengaturan: {title:'Pengaturan Sistem', desc:'Anggota perusahaan & peran, serta tutup/buka tahun fiskal — khusus Owner'}
 };
 
 const OWNER_ONLY_TABS = ['pengaturan'];
@@ -1723,12 +1808,9 @@ function renderPengaturan(){
 
   setContent(`
     <div class="section">
-      <div class="section-head">
-        <div><h2>Manajemen Pengguna</h2><div class="hint">Setujui atau tolak pendaftar baru, ubah peran, dan nonaktifkan akun. Pendaftar pertama otomatis menjadi Owner.</div></div>
-        <button class="btn btn-outline btn-sm" onclick="authRefreshUsers()">&#8635; Muat Ulang</button>
-      </div>
-      ${authPendingCount ? `<div class="section-body" style="padding-bottom:0;"><div class="balance-check bad">&#128276; ${authPendingCount} pendaftar menunggu persetujuan. Klik <strong>Setujui</strong> atau <strong>Tolak</strong> pada baris berstatus Menunggu.</div></div>` : ""}
-      <div class="section-body scrollx" id="userMgmt">${authUsersHtml()}</div>
+      <div class="section-head"><div><h2>Anggota Perusahaan</h2><div class="hint">Atur siapa yang boleh mengakses data <strong>${esc((authCompany&&authCompany.name)||DB.company.name||'perusahaan ini')}</strong>. Data perusahaan ini terpisah dari perusahaan lain dan hanya bisa dilihat anggota di bawah.</div></div>
+        <button class="btn btn-outline btn-sm" onclick="authLoadMembers()">&#8635; Muat Ulang</button></div>
+      <div class="section-body" id="memberMgmt">${authMembersHtml()}</div>
     </div>
     <div class="section">
       <div class="section-head"><div><h2>Tahun Fiskal Perusahaan</h2><div class="hint">Tanggal mulai pembukuan sejak usaha pertama kali berjalan — memengaruhi seluruh perhitungan laporan tahunan</div></div></div>
@@ -1795,8 +1877,8 @@ create policy "allow anon update" on app_state for update using (true);</textare
           <div class="field"><label>Anon Public Key</label><input id="sb_key" placeholder="eyJhbGciOi..." value="${esc(supaConfig.key)}"></div>
         </div>
         <div class="row">
-          <div class="field"><label>Nama Tabel</label><input id="sb_table" value="${esc(supaConfig.table || 'app_state')}"></div>
-          <div class="field"><label>ID Baris (kunci data Anda)</label><input id="sb_rowid" placeholder="cth. cv-beauty-lux-care" value="${esc(supaConfig.rowId)}"></div>
+          <div class="field"><label>Nama Tabel</label><input id="sb_table" readonly value="${esc(supaConfig.table || 'app_state')}"></div>
+          <div class="field"><label>ID Baris (kunci data Anda)</label><input id="sb_rowid" readonly title="Diatur otomatis sesuai perusahaan yang dibuka" placeholder="cth. cv-beauty-lux-care" value="${esc(supaConfig.rowId)}"></div>
         </div>
         <div class="field">
           <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="sb_autosync" style="width:auto;" ${supaAutoSync?'checked':''}> Sinkron otomatis ke cloud setiap ada perubahan (beberapa detik setelah Anda berhenti mengetik/klik)</label>
@@ -4685,8 +4767,8 @@ async function authRest(path, method, body, extraHeaders){
 }
 
 /* ---------- tampilan layar auth ---------- */
-function authShell(inner){
-  return `<div class="auth-card"><div class="auth-logo">&#9783;</div>${inner}</div>`;
+function authShell(inner, wide){
+  return `<div class="auth-card${wide?' wide':''}">${inner}</div>`;
 }
 function renderAuth(view, msg, kind){
   const el = document.getElementById('authScreen');
@@ -4732,7 +4814,7 @@ function renderAuth(view, msg, kind){
       </form>
       <div class="auth-links"><a onclick="authResetCancel()">&larr; Kembali ke Masuk</a></div>`);
   } else if (view === 'pending'){
-    html = authShell(`<div class="auth-status-ico">&#9203;</div><h2>Menunggu Persetujuan</h2>
+    html = authShell(`<div class="auth-status-ico" style="text-align:center">&#9203;</div><h2>Menunggu Persetujuan</h2>
       <div class="auth-sub">Pendaftaran kamu sudah diterima dan sedang menunggu persetujuan pemilik. Kamu akan bisa masuk setelah disetujui.</div>${m}
       <button class="btn btn-primary" onclick="authCheckStatus()">Cek Status Lagi</button>
       <button class="btn btn-outline" style="margin-top:10px;" onclick="authLogout()">Keluar</button>`);
@@ -4744,8 +4826,23 @@ function renderAuth(view, msg, kind){
     html = authShell(`<div class="auth-status-ico">&#128274;</div><h2>Akun Dinonaktifkan</h2>
       <div class="auth-sub">Akun kamu telah dinonaktifkan oleh pemilik aplikasi dan tidak bisa digunakan untuk saat ini. Hubungi pemilik aplikasi untuk informasi lebih lanjut.</div>${m}
       <button class="btn btn-outline" onclick="authLogout()">Keluar</button>`);
+  } else if (view === 'companies'){
+    const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
+    const list = authCompanies.map(c => `<button class="auth-co" onclick="authChooseCompany('${esc(c.id)}')"><span><b>${esc(c.name)}</b><small>Peran: ${roleLabel[c.role]||c.role}</small></span><span class="arr">&rarr;</span></button>`).join('')
+      || `<div class="auth-sub" style="margin-top:-4px;">Kamu belum punya perusahaan. Buat perusahaan baru di bawah, atau minta pemilik perusahaan menambahkan email kamu sebagai anggota.</div>`;
+    const canCreate = true;
+    const create = canCreate ? `<hr class="auth-hr"><div class="auth-sec">Buat Perusahaan Baru</div>
+      <form onsubmit="authCreateCompany(event)"><div class="field"><input id="au_coname" type="text" placeholder="Nama perusahaan/toko" required></div>
+      <button class="btn btn-primary" type="submit" id="au_btn">+ Buat Perusahaan</button></form>` : '';
+    html = authShell(`<h2>Pilih Perusahaan</h2><div class="auth-sub">Satu akun bisa mengakses beberapa perusahaan/toko</div>${m}${list}${create}
+      <div class="auth-center"><a onclick="authLogout()" style="cursor:pointer;">Keluar dari akun</a>
+      ${isSysOwner() ? `<div><a class="auth-amber" id="au_manage_link" onclick="authOpenManage()">Kelola Pengguna${authPendingCount ? ' (' + authPendingCount + ' menunggu)' : ''}</a></div>` : ''}</div>`);
+  } else if (view === 'manage'){
+    html = authShell(`<h2>Kelola Pengguna</h2><div class="auth-sub">Kontrol siapa yang boleh mendaftar dan memakai aplikasi. Data tiap perusahaan terpisah &mdash; pemilik sistem pun tidak dapat melihat data perusahaan milik orang lain.</div>${m}
+      <div class="auth-mgmt" style="overflow-x:auto;">${authManageHtml()}</div>
+      <div class="auth-center"><a class="auth-amber" onclick="authShowCompanies()">&larr; Kembali ke Pilih Perusahaan</a></div>`, true);
   } else {
-    html = authShell(`<div style="text-align:center;color:var(--ink-soft);padding:20px 0;">${esc(msg||'Memuat…')}</div>`);
+    html = authShell(`<div style="text-align:center;color:#6B7280;padding:20px 0;">${esc(msg||'Memuat…')}</div>`);
   }
   el.innerHTML = html;
   const first = el.querySelector('input'); if (first && first.type !== 'radio') { try { first.focus(); } catch(e){} }
@@ -4824,130 +4921,215 @@ async function authCheckStatus(){
 }
 function authEnterApp(){
   const st = authProfile && authProfile.status;
-  if (st === 'approved'){
-    document.getElementById('authScreen').hidden = true;
-    renderCurrent();
-    authStartPolling();
-    if (supaConfigured()){
-      setSupaStatus('busy', 'Menyambungkan ke Supabase…');
-      supaPull(true).then(function(ok){
-        if (!ok) setSupaStatus('idle', 'Tidak memuat data cloud otomatis (belum ada data tersimpan atau koneksi gagal). Data contoh/lokal tetap dipakai.');
-      });
-    }
-  } else if (st === 'rejected') renderAuth('rejected');
+  if (st === 'approved') authShowCompanies();
+  else if (st === 'rejected') renderAuth('rejected');
   else if (st === 'inactive') renderAuth('inactive');
   else renderAuth('pending');
 }
 async function authLogout(everywhere){
   if (everywhere && !confirm('Keluar dari SEMUA device? Anda juga akan keluar dari perangkat ini dan harus masuk lagi.')) return;
+  await authFlush();
   try { if (authSession) await authCall('/logout?scope=' + (everywhere ? 'global' : 'local'), 'POST', null, authSession.access_token); } catch(e){}
-  authSession = null; authProfile = null; authUsers = null; authPendingCount = 0; authSaveSession();
+  authSession = null; authProfile = null; authCompany = null; authPendingCount = 0; authSaveSession();
   if (authPollTimer){ clearInterval(authPollTimer); authPollTimer = null; }
   renderAuth('login');
 }
 
-/* ---------- Manajemen pengguna (Owner) ---------- */
-function authStatusPill(st){
-  const map = {approved:['pill-ok','Aktif'], pending:['pill-warn','Menunggu'], rejected:['pill-beban','Ditolak'], inactive:['pill-kewajiban','Nonaktif']};
-  const x = map[st] || ['', st]; return `<span class="pill ${x[0]}">${x[1]}</span>`;
+/* ---------- Pilih Perusahaan ---------- */
+function blankCompanyData(name){
+  seedSampleData();   // hanya untuk mendapatkan bagan akun baku; semua transaksi contoh dibuang di bawah
+  DB.coa.forEach(a => { a.initial = 0; });
+  DB.journal = []; DB.fixedAssets = []; DB.inventoryItems = []; DB.stockMoves = []; DB.invoices = [];
+  DB.budgets = {}; DB.bankRecon = []; DB.auditLog = []; DB.closedYears = [];
+  DB.counters = {journal:0, invoice:0};
+  // reset SEMUA kunci data lain agar tidak ada yang terbawa dari perusahaan yang dibuka sebelumnya
+  DB.branches = []; DB.activeYear = 2026;
+  DB.users = [{id:'owner', name:'Pemilik Usaha', role:'owner'}, {id:'admin', name:'Admin', role:'admin'}, {id:'staff', name:'Staff', role:'staff'}, {id:'user', name:'User', role:'user'}];
+  DB.activeUser = 'admin';
+  DB.company = {name: name, address:'', city:'', province:'', npwp:'', email:'', fiscalStart:'2026-01-01'};
+  supaVersion = null;
 }
-let authUsersT = 0;
-function authUsersHtml(){
-  if (!authUsersT || Date.now() - authUsersT > 5000){ authUsersT = Date.now(); setTimeout(authRefreshUsers, 0); }
-  if (!authUsers) return '<div class="hint">Memuat daftar pengguna…</div>';
-  if (!authUsers.length) return '<div class="hint">Belum ada pengguna.</div>';
-  const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
-  const rows = authUsers.slice().sort((a,b)=> (a.status==='pending'?-1:0) - (b.status==='pending'?-1:0) || String(a.created_at).localeCompare(String(b.created_at))).map(u => {
-    const me = authProfile && u.id === authProfile.id;
-    let act = '';
-    if (me) act = '<span class="tag-small">(Anda)</span>';
-    else if (u.status === 'pending') act = `<button class="btn btn-primary btn-sm" onclick="authOpenApprove('${u.id}')">Setujui</button> <button class="btn btn-danger btn-sm" onclick="authSetStatus('${u.id}','rejected')">Tolak</button>`;
-    else if (u.status === 'approved') act = `<button class="btn btn-outline btn-sm" onclick="authOpenApprove('${u.id}')">Ubah Peran</button> <button class="btn btn-danger btn-sm" onclick="authSetStatus('${u.id}','inactive')">Nonaktifkan</button>`;
-    else act = `<button class="btn btn-outline btn-sm" onclick="authOpenApprove('${u.id}')">Aktifkan</button>`;
-    return `<tr><td>${esc(u.name||'-')}<div class="tag-small">${esc(u.email||'')}</div></td>
-      <td>${u.requested_role==='owner'?'Owner':'Karyawan'}</td>
-      <td>${u.status==='approved' ? (roleLabel[u.app_role]||u.app_role) : '-'}</td>
-      <td class="center">${authStatusPill(u.status)}</td><td class="center">${act}</td></tr>`;
-  }).join('');
-  return `<table><thead><tr><th>Pengguna</th><th>Mendaftar sebagai</th><th>Peran</th><th class="center">Status</th><th class="center">Aksi</th></tr></thead><tbody>${rows}</tbody></table>`;
-}
-async function authRefreshUsers(){
-  if (!isOwner()) return;
-  try { authUsers = await authRest('akt_profiles?select=*&order=created_at.asc'); }
-  catch(e){ authUsers = []; alert('Gagal memuat pengguna: ' + e.message); }
-  authPendingCount = (authUsers||[]).filter(u=>u.status==='pending').length;
-  authUpdatePendingBadge();
-  const el = document.getElementById('userMgmt'); if (el) el.innerHTML = authUsersHtml();
-}
-function authOpenApprove(id){
-  if (!isOwner()) return;
-  const u = (authUsers||[]).find(x=>x.id===id); if (!u) return;
-  const cur = u.status==='approved' ? u.app_role : (u.requested_role==='owner' ? 'admin' : 'staff');
-  const body = `<div class="hint" style="margin-bottom:10px;">${esc(u.name||'')} &mdash; ${esc(u.email||'')}</div>
-    <div class="field"><label>Peran</label><select id="um_role">
-      <option value="owner" ${cur==='owner'?'selected':''}>Owner — akses penuh + Pengaturan Sistem</option>
-      <option value="admin" ${cur==='admin'?'selected':''}>Admin — akses penuh operasional</option>
-      <option value="staff" ${cur==='staff'?'selected':''}>Staff — input transaksi, perlu persetujuan</option>
-      <option value="user" ${cur==='user'?'selected':''}>User — hanya melihat</option></select></div>`;
-  const foot = `<button class="btn btn-outline" onclick="closeModal()">Batal</button>
-    <button class="btn btn-primary" onclick="authApprove('${id}')">Simpan &amp; Aktifkan</button>`;
-  openModal(u.status==='approved' ? 'Ubah Peran' : 'Setujui Pengguna', body, foot);
-}
-async function authApprove(id){
-  const role = document.getElementById('um_role').value;
-  await authPatchUser(id, {status:'approved', app_role: role}, 'Setujui/ubah peran → ' + roleLabelFor(role));
-  closeModal();
-}
-async function authSetStatus(id, status){
-  const u = (authUsers||[]).find(x=>x.id===id); if (!u) return;
-  const txt = {rejected:'Tolak pendaftaran', inactive:'Nonaktifkan akun'}[status] || status;
-  if (!confirm(txt + ' "' + (u.name||u.email) + '"?')) return;
-  await authPatchUser(id, {status}, txt);
-}
-async function authPatchUser(id, patch, label){
-  if (!isOwner()) return;
-  if (authProfile && id === authProfile.id){ alert('Anda tidak dapat mengubah akun Anda sendiri.'); return; }
+let authCompanies = [];
+async function authShowCompanies(msg, kind){
+  renderAuth('loading', 'Memuat perusahaan…');
   try {
-    await authRest('akt_profiles?id=eq.' + encodeURIComponent(id), 'PATCH', patch);
-    const u = (authUsers||[]).find(x=>x.id===id);
-    logAuditSilent('Pengguna', (u&&(u.name||u.email))||id, label);
-    await authRefreshUsers();
-  } catch(e){ alert('Gagal menyimpan: ' + e.message); }
+    const rows = await authRest('akt_members?select=role,company:akt_companies(id,name)&user_id=eq.' + encodeURIComponent(authSession.user.id));
+    authCompanies = (rows||[]).filter(r=>r.company).map(r => ({id:r.company.id, name:r.company.name, role:r.role}));
+  } catch(e){ authCompanies = []; msg = 'Gagal memuat perusahaan: ' + e.message; kind = 'err'; }
+  if (isSysOwner()) authPollPending();
+  renderAuth('companies', msg, kind);
+}
+async function authChooseCompany(id){
+  const c = authCompanies.find(x=>x.id===id); if (!c) return;
+  renderAuth('loading', 'Membuka ' + c.name + '…');
+  authCompany = null; authMembers = null; authMembersT = 0;
+  if (supaSyncTimer){ clearTimeout(supaSyncTimer); supaSyncTimer = null; }
+  try {
+    blankCompanyData(c.name);
+    supaConfig.rowId = c.id;
+    const rows = await authRest('akt_app_state?id=eq.' + encodeURIComponent(c.id) + '&select=data,updated_at&limit=1');
+    let needPush = true;
+    if (rows && rows.length && rows[0].data && Object.keys(rows[0].data).length){
+      const data = rows[0].data;
+      if (!Array.isArray(data.coa) || !Array.isArray(data.journal)) throw new Error('Struktur data perusahaan tidak dikenali.');
+      BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = data[k]; });
+      supaVersion = rows[0].updated_at;
+      needPush = false;
+    }
+    authCompany = c;
+    unsavedChangeCount = 0; undoSnapshot = null; redoSnapshot = null; currentTab = 'dashboard';
+    if (needPush && ['owner','admin','staff'].indexOf(c.role) >= 0) await supaPush(true);
+    document.getElementById('authScreen').hidden = true;
+    setSupaStatus('ok', 'Terhubung — data perusahaan "' + c.name + '" dimuat dari cloud.');
+    renderCurrent();
+    if (isSysOwner()) authStartPolling();
+  } catch(e){
+    authCompany = null;
+    authShowCompanies('Gagal membuka perusahaan: ' + e.message, 'err');
+  }
+}
+async function authCreateCompany(ev){
+  ev.preventDefault();
+  const name = document.getElementById('au_coname').value.trim();
+  if (!name) return;
+  authBusy(true);
+  try {
+    const rec = await authRest('rpc/akt_create_company', 'POST', {p_name: name});
+    const c = Array.isArray(rec) ? rec[0] : rec;
+    authCompanies.push({id:c.id, name:c.name, role:'owner'});
+    await authChooseCompany(c.id);
+  } catch(e){ authShowCompanies('Gagal membuat perusahaan: ' + e.message, 'err'); }
+}
+async function authFlush(){
+  if (supaSyncTimer){ clearTimeout(supaSyncTimer); supaSyncTimer = null; }
+  if (authCompany && ['owner','admin','staff'].indexOf(authCompany.role) >= 0 && unsavedChangeCount > 0){ try { await supaPush(true); } catch(e){} }
+}
+async function authSwitchCompany(){
+  await authFlush();
+  authCompany = null;
+  authShowCompanies();
 }
 
+/* ---------- Kelola Pengguna (khusus pemilik sistem) ---------- */
 let authPendingCount = 0;
 let authPollTimer = null;
 function authPendingBannerHtml(){
-  if (!isOwner() || !authPendingCount) return '';
-  return `<div class="balance-check bad" style="margin-bottom:12px;">&#128276; ${authPendingCount} pendaftar baru menunggu persetujuan Anda &mdash; <a href="#" onclick="switchTab('pengaturan'); return false;" style="color:inherit; font-weight:700; text-decoration:underline;">Tinjau sekarang</a></div>`;
-}
-function authUpdatePendingBadge(){
-  const btn = document.querySelector('button[data-tab="pengaturan"] .lbl');
-  if (!btn) return;
-  const old = btn.querySelector('.pend-badge'); if (old) old.remove();
-  if (isOwner() && authPendingCount){
-    const b = document.createElement('span');
-    b.className = 'pend-badge'; b.textContent = authPendingCount;
-    b.style.cssText = 'margin-left:8px; background:#C0392B; color:#fff; border-radius:10px; padding:1px 7px; font-size:11px; font-weight:700;';
-    btn.appendChild(b);
-  }
+  if (!isSysOwner() || !authPendingCount) return '';
+  return `<div class="balance-check bad" style="margin-bottom:12px;">&#128276; ${authPendingCount} pendaftar baru menunggu persetujuan Anda &mdash; <a href="#" onclick="authOpenManage(); return false;" style="color:inherit; font-weight:700; text-decoration:underline;">Kelola Pengguna</a></div>`;
 }
 async function authPollPending(){
-  if (!isOwner() || !authSession) return;
+  if (!isSysOwner() || !authSession) return;
   try {
     const rows = await authRest('akt_profiles?status=eq.pending&select=id');
     const n = (rows||[]).length;
     const changed = n !== authPendingCount;
     authPendingCount = n;
-    authUpdatePendingBadge();
-    if (changed && currentTab === 'dashboard') renderCurrent();
+    if (changed && authCompany && currentTab === 'dashboard') renderCurrent();
+    if (changed){ const lk = document.getElementById('au_manage_link'); if (lk) lk.textContent = 'Kelola Pengguna' + (n ? ' (' + n + ' menunggu)' : ''); }
   } catch(e){}
 }
 function authStartPolling(){
   if (authPollTimer) clearInterval(authPollTimer);
-  authPollPending();
   authPollTimer = setInterval(authPollPending, 60000);
 }
+async function authOpenManage(){
+  if (!isSysOwner()) return;
+  await authFlush();
+  authCompany = null;
+  renderAuth('loading', 'Memuat pengguna…');
+  try {
+    const users = await authRest('akt_profiles?select=*&order=created_at.asc');
+    authMgmt = {users: users||[], comps: [], mems: []};
+    authPendingCount = authMgmt.users.filter(u=>u.status==='pending').length;
+  } catch(e){ authShowCompanies('Gagal memuat pengguna: ' + e.message, 'err'); return; }
+  renderAuth('manage');
+}
+let authMgmt = {users:[], comps:[], mems:[]};
+function authManageHtml(){
+  const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
+  const pill = {approved:['ok','Disetujui'], pending:['wait','Menunggu'], rejected:['no','Ditolak'], inactive:['off','Nonaktif']};
+  const users = authMgmt.users.slice().sort((a,b)=> (b.status==='pending') - (a.status==='pending') || String(a.created_at).localeCompare(String(b.created_at)));
+  const rows = users.map(u => {
+    const me = authProfile && u.id === authProfile.id;
+    const pl = pill[u.status] || ['', u.status];
+    let act = '';
+    if (me) act = '<span style="color:#6B7280;">(Anda — pemilik sistem)</span>';
+    else if (u.status === 'pending') act = `<button class="btn btn-primary btn-sm" onclick="authMgmtStatus('${u.id}','approved')">Setujui</button> <button class="btn btn-danger btn-sm" onclick="authMgmtStatus('${u.id}','rejected')">Tolak</button>`;
+    else if (u.status === 'approved') act = `<button class="btn btn-danger btn-sm" onclick="authMgmtStatus('${u.id}','inactive')">Nonaktifkan</button>`;
+    else act = `<button class="btn btn-outline btn-sm" onclick="authMgmtStatus('${u.id}','approved')">Aktifkan</button>`;
+    const access = '';
+    return `<tr><td><b>${esc(u.name||'-')}</b><div style="color:#6B7280;font-size:12px;">${esc(u.email||'')}</div></td>
+      <td data-l="Mendaftar sebagai">${u.requested_role==='owner'?'Owner':'Karyawan'}</td><td data-l="Status"><span class="auth-pill ${pl[0]}">${pl[1]}</span></td>
+      <td>${act}${access}</td></tr>`;
+  }).join('');
+  return `<table><thead><tr><th>Pengguna</th><th>Mendaftar sebagai</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+async function authMgmtStatus(id, status){
+  const u = authMgmt.users.find(x=>x.id===id); if (!u || id === authProfile.id) return;
+  const txt = {approved:'Setujui / aktifkan', rejected:'Tolak pendaftaran', inactive:'Nonaktifkan akun'}[status];
+  if (status !== 'approved' && !confirm(txt + ' "' + (u.name||u.email) + '"?')) return;
+  try {
+    await authRest('akt_profiles?id=eq.' + encodeURIComponent(id), 'PATCH', {status});
+    u.status = status;
+    authPendingCount = authMgmt.users.filter(x=>x.status==='pending').length;
+    renderAuth('manage');
+  } catch(e){ alert('Gagal menyimpan: ' + e.message); }
+}
+
+/* ---------- Anggota Perusahaan (dikelola Owner perusahaan itu sendiri) ---------- */
+let authMembers = null, authMembersT = 0;
+function authMembersHtml(){
+  if (!authMembersT || Date.now() - authMembersT > 5000){ authMembersT = Date.now(); setTimeout(authLoadMembers, 0); }
+  const roleOpts = sel => ['owner','admin','staff','user'].map(r => `<option value="${r}" ${r===sel?'selected':''}>${({owner:'Owner',admin:'Admin',staff:'Staff',user:'User'})[r]}</option>`).join('');
+  const myId = authProfile && authProfile.id;
+  const rows = (authMembers||[]).map(m => {
+    const me = m.user_id === myId;
+    return `<tr><td><b>${esc(m.name||'-')}</b>${me?' <span class="tag-small">(Anda)</span>':''}<div class="tag-small">${esc(m.email||'')}</div></td>
+      <td>${me ? ({owner:'Owner',admin:'Admin',staff:'Staff',user:'User'})[m.role] : `<select onchange="authSetMemberRole('${m.user_id}', this.value)">${roleOpts(m.role)}</select>`}</td>
+      <td class="center">${me ? '' : `<button class="btn btn-danger btn-sm" onclick="authRemoveMember('${m.user_id}')">Hapus Akses</button>`}</td></tr>`;
+  }).join('');
+  return `${authMembers ? `<div class="scrollx"><table><thead><tr><th>Anggota</th><th>Peran</th><th class="center">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="hint">Memuat anggota…</div>'}
+    <div class="row" style="margin-top:14px; align-items:flex-end;">
+      <div class="field"><label>Tambah anggota (email akun yang sudah terdaftar &amp; disetujui)</label><input id="mb_email" type="email" placeholder="email@contoh.com"></div>
+      <div class="field" style="max-width:170px;"><label>Peran</label><select id="mb_role">${roleOpts('staff')}</select></div>
+      <div class="field" style="max-width:150px;"><button class="btn btn-primary" onclick="authAddMember()">+ Tambah</button></div>
+    </div>
+    <div class="hint">Orang yang ingin Anda tambahkan harus mendaftar terlebih dahulu di halaman login dan disetujui oleh pemilik sistem.</div>`;
+}
+async function authLoadMembers(){
+  if (!isOwner() || !authCompany) return;
+  try { authMembers = await authRest('rpc/akt_company_members', 'POST', {p_company: authCompany.id}); }
+  catch(e){ authMembers = []; alert('Gagal memuat anggota: ' + e.message); }
+  const el = document.getElementById('memberMgmt'); if (el) el.innerHTML = authMembersHtml();
+}
+async function authAddMember(){
+  if (!isOwner() || !authCompany) return;
+  const email = document.getElementById('mb_email').value.trim(), role = document.getElementById('mb_role').value;
+  if (!email){ alert('Isi email anggota yang ingin ditambahkan.'); return; }
+  try {
+    await authRest('rpc/akt_add_member', 'POST', {p_company: authCompany.id, p_email: email, p_role: role});
+    logAuditSilent('Anggota', email, 'Tambah akses sebagai ' + roleLabelFor(role));
+    authMembersT = Date.now(); await authLoadMembers();
+  } catch(e){ alert('Gagal menambah anggota: ' + e.message); }
+}
+async function authSetMemberRole(uid, role){
+  if (!isOwner() || !authCompany) return;
+  try {
+    await authRest('rpc/akt_set_member_role', 'POST', {p_company: authCompany.id, p_user: uid, p_role: role});
+    logAuditSilent('Anggota', uid, 'Ubah peran menjadi ' + roleLabelFor(role));
+  } catch(e){ alert('Gagal mengubah peran: ' + e.message); }
+  authMembersT = Date.now(); await authLoadMembers();
+}
+async function authRemoveMember(uid){
+  if (!isOwner() || !authCompany) return;
+  if (!confirm('Hapus akses anggota ini ke perusahaan?')) return;
+  try {
+    await authRest('akt_members?company_id=eq.' + encodeURIComponent(authCompany.id) + '&user_id=eq.' + encodeURIComponent(uid), 'DELETE');
+    logAuditSilent('Anggota', uid, 'Hapus akses');
+  } catch(e){ alert('Gagal menghapus akses: ' + e.message); }
+  authMembersT = Date.now(); await authLoadMembers();
+}
+
 /* ================= Init ================= */
 loadSupaConfig();
 authLoadSession();
