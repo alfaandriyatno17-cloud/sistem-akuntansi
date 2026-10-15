@@ -403,6 +403,159 @@
   .auth-pill{display:inline-block; font-size:11.5px; font-weight:700; padding:2px 9px; border-radius:10px;}
   .auth-pill.ok{background:#E7F3EC; color:#276749;} .auth-pill.wait{background:#FFF4DC; color:#8A6D1D;}
   .auth-pill.no{background:#FBEAE3; color:#9C4221;} .auth-pill.off{background:#ECEFF3; color:#4A5568;}
+
+  /* =====================================================================
+     TEMA "KERTAS BUKU BESAR" — krem hangat, biru tinta, aksen amber.
+     Satu identitas dengan layar login. Semua override ada di blok ini.
+     ===================================================================== */
+  :root{
+    --navy-950:#0E1830; --navy-900:#14213D; --navy-800:#1E2F55; --navy-700:#2B4170;
+    --paper:#FBF6EE; --card:#FFFFFF; --ink:#1B2433; --ink-soft:#667085;
+    --line:#EADFC8; --line-soft:#F3ECDC;
+    --green:#2F6B4F; --green-bg:#E8F2EB; --rust:#A8442A; --rust-bg:#FBEBE4;
+    --gold:#8A6420; --gold-bg:#FFF3D9;
+    --amber:#E8A23C; --amber-deep:#C97A1E;
+    --radius:14px;
+    --serif:'Fraunces', Georgia, 'Iowan Old Style', serif;
+    --sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    --shadow-card:0 1px 2px rgba(80,55,15,.05), 0 10px 28px -14px rgba(80,55,15,.16);
+  }
+  body{background:var(--paper); font-family:var(--sans); font-feature-settings:'tnum' 1,'cv11' 1;}
+  ::selection{background:#F6DDA9;}
+  :focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  *{scrollbar-width:thin; scrollbar-color:#D9CBA8 transparent;}
+
+  /* ---- Sidebar ---- */
+  .sidebar{width:252px; flex-basis:252px; background:linear-gradient(185deg,#0F1A33 0%,#14213D 55%,#182848 100%); color:#D6DEEB;}
+  .brand{display:flex; align-items:center; gap:12px; padding:22px 18px 18px; border-bottom:1px solid rgba(255,255,255,.07);}
+  .brand .mono{flex:0 0 40px; width:40px; height:40px; border-radius:12px; background:var(--amber); color:#1B2433;
+    font-family:var(--serif); font-weight:800; font-size:17px; display:flex; align-items:center; justify-content:center; letter-spacing:-.02em;}
+  .brand .txt{min-width:0;}
+  .brand .mark{font-family:var(--serif); font-weight:700; font-size:17px; color:#fff; letter-spacing:-.01em; line-height:1.15;}
+  .brand .sub{font-size:11.5px; color:#9FB0CB; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .navlist{margin:6px 0; padding:0 10px;}
+  .navgroup-label{font-size:11px; font-weight:600; color:#7F92B2; padding:18px 10px 6px; letter-spacing:.02em;}
+  .navlist button{padding:8px 10px; margin:1px 0; border-left:0 !important; border-radius:10px; font-size:13.2px; color:#C3CFE2; gap:11px; transition:background .15s, color .15s; position:relative;}
+  .navlist button:hover{background:rgba(255,255,255,.06); color:#fff;}
+  .navlist button.active{background:rgba(232,162,60,.14); color:#fff; font-weight:600;}
+  .navlist button.active::before{content:''; position:absolute; left:-10px; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:var(--amber);}
+  .navlist button .ic{width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; opacity:.8; font-size:13px;}
+  .navlist button .ic svg{width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round;}
+  .navlist button.active .ic{opacity:1; color:var(--amber);}
+  .sidebar-foot{color:#7F92B2; border-top:1px solid rgba(255,255,255,.07); font-size:11px;}
+
+  /* ---- Topbar ---- */
+  .topbar{background:rgba(251,246,238,.88); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); padding:14px 32px 14px; gap:12px !important;}
+  .topbar h1{font-family:var(--serif); font-weight:700; font-size:28px; letter-spacing:-.02em; color:var(--navy-900); line-height:1.15;}
+  .topbar .desc{font-size:13px; color:var(--ink-soft); margin-top:3px;}
+  .topbar .period{font-size:12px; color:var(--ink-soft);}
+  #globalSearch{background:#fff !important; border:1px solid var(--line) !important; border-radius:999px !important; padding:9px 16px !important; box-shadow:0 1px 2px rgba(80,55,15,.04);}
+  #searchResults{border-radius:14px !important; border-color:var(--line) !important; box-shadow:0 18px 40px -12px rgba(60,40,10,.28) !important;}
+  #yearSwitcher{border-radius:999px; background:#fff; border:1px solid var(--line); padding:6px 12px !important; font-weight:600; cursor:pointer;}
+  .top-right{display:flex; flex-direction:column; align-items:flex-end; gap:6px;}
+  #roleSwitcher{display:inline-flex; align-items:center; gap:4px; flex-wrap:wrap; justify-content:flex-end;}
+  .bi{width:15px; height:15px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; flex:none;}
+  .uchip{display:inline-flex; align-items:center; gap:9px; padding:4px 12px 4px 4px; border:1px solid var(--line); border-radius:999px; background:#fff;}
+  .uchip .av{width:30px; height:30px; border-radius:50%; background:var(--navy-900); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:11.5px; letter-spacing:.02em;}
+  .uchip .who{display:flex; flex-direction:column; line-height:1.2;}
+  .uchip .who b{font-size:12.5px; color:var(--ink);} .uchip .who small{font-size:11px; color:var(--ink-soft);}
+  .content{padding:28px 32px 72px;}
+
+  /* ---- Tombol (memperbaiki 'all:unset' yang sebelumnya menghapus gaya varian) ---- */
+  button.btn{font-family:var(--sans); font-size:12.5px; font-weight:600; padding:8px 15px; border-radius:10px; border:1px solid transparent; transition:background .15s, border-color .15s, box-shadow .15s, transform .05s; line-height:1.2;}
+  button.btn:active{transform:translateY(1px);}
+  button.btn-primary{background:var(--amber); color:#1B2433; border-color:var(--amber); box-shadow:0 1px 0 rgba(255,255,255,.35) inset, 0 1px 2px rgba(150,90,10,.25);}
+  button.btn-primary:hover{background:#DD9628; border-color:#DD9628;}
+  button.btn-outline{background:#fff; border-color:var(--line); color:var(--ink);}
+  button.btn-outline:hover{border-color:#D8C79F; background:#FFFCF5;}
+  button.btn-danger{background:#fff; border-color:#EBC3B7; color:var(--rust);}
+  button.btn-danger:hover{background:var(--rust-bg);}
+  button.btn-sm{padding:5px 11px; font-size:12px; border-radius:8px;}
+  button.btn[disabled]{opacity:.45;}
+  .topbar-toolrow button.btn-outline{background:transparent; border-color:transparent; color:#475467; padding:7px 10px;}
+  .topbar-toolrow button.btn-outline:hover{background:#fff; border-color:var(--line);}
+
+  /* ---- Kartu & seksi ---- */
+  .card, .section{border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow-card);}
+  .section{margin-bottom:22px;}
+  .section-head{padding:16px 22px; border-bottom:1px solid var(--line-soft);}
+  .section-head h2{font-family:var(--serif); font-weight:700; font-size:17px; letter-spacing:-.01em; color:var(--navy-900);}
+  .section-head .hint{font-size:12px; margin-top:3px;}
+  .section-body{padding:18px 22px;}
+
+  /* Ringkasan angka: satu panel bergaris pemisah, seperti lembar neraca */
+  .cards{gap:0; background:#fff; border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow-card); overflow:hidden; margin-bottom:24px;}
+  .cards .card{border:0; border-radius:0; box-shadow:none; background:transparent; padding:20px 24px; border-right:1px solid var(--line-soft);}
+  .cards .card:last-child{border-right:0;}
+  .card .label{font-size:12px; color:var(--ink-soft); margin-bottom:8px; font-weight:500;}
+  .card .value{font-family:var(--serif); font-weight:700; font-size:26px; letter-spacing:-.02em; color:var(--navy-900); font-variant-numeric:tabular-nums lining-nums;}
+  .card .value.pos{color:var(--green);} .card .value.neg{color:var(--rust);}
+
+  /* ---- Tabel ---- */
+  table{font-size:13px;}
+  th, td{padding:10px 12px; border-bottom:1px solid var(--line-soft);}
+  thead th{font-size:12px; font-weight:600; text-transform:none; letter-spacing:0; color:#5B6475; background:#FCF8EF; border-bottom:1px solid var(--line);}
+  tbody tr{transition:background .12s;} tbody tr:hover{background:#FEFAF1;}
+  td.num, th.num{font-variant-numeric:tabular-nums lining-nums;}
+  tfoot td{background:#FCF8EF; border-top:3px double var(--navy-900); font-weight:700;}
+  .empty-row td{font-style:normal; color:var(--ink-soft);}
+
+  /* ---- Form ---- */
+  input, select, textarea{border:1px solid #E3D6B8; border-radius:10px; padding:9px 11px; font-family:var(--sans); background:#fff; transition:border-color .15s, box-shadow .15s;}
+  input:focus, select:focus, textarea:focus{outline:0; border-color:var(--amber); box-shadow:0 0 0 3px rgba(232,162,60,.22);}
+  label{font-size:12px; font-weight:500; color:#5B6475;}
+
+  /* ---- Pil, pesan, modal ---- */
+  .pill{font-weight:600; padding:3px 10px;}
+  .pill-aset{background:#E6EEF8; color:#1F4F86;} .pill-modal{background:var(--gold-bg); color:var(--gold);}
+  .pill-beban{background:#EEE8F7; color:#5B3F96;}
+  .balance-check{border-radius:12px; padding:11px 14px; font-weight:600;}
+  .modal-overlay{background:rgba(14,24,48,.5); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);}
+  .modal{border-radius:18px; box-shadow:0 30px 80px -20px rgba(14,24,48,.5);}
+  .modal-head{padding:18px 24px;} .modal-head h3{font-family:var(--serif); font-weight:700; font-size:19px; color:var(--navy-900);}
+  .modal-body{padding:20px 24px;} .modal-foot{padding:16px 24px;}
+
+  /* ---- Laporan ---- */
+  .stmt-head .co{font-family:var(--serif); font-weight:700; font-size:21px; color:var(--navy-900);}
+  .stmt-head .ti{text-transform:none; letter-spacing:0; font-family:var(--serif); font-size:16px; font-weight:600; margin-top:4px;}
+  .stmt .grand{border-top:3px double var(--navy-900);}
+  .mtx-wrap{border-radius:14px; border-color:var(--line);}
+  .mtx thead th{background:var(--navy-900); color:#F4EBD6;} .mtx thead th:first-child{background:#F6EEDC; color:var(--navy-900);}
+  .mtx tr.mgrp td, .mtx tr.mgrp td:first-child, .mtx tr.mtot td, .mtx tr.mtot td:first-child{background:#FCF8EF;}
+  .mtx tr.mgrand td, .mtx tr.mgrand td:first-child{background:#F6EEDC; border-top:3px double var(--navy-900);}
+  .invoice-preview{border-radius:14px; border-color:var(--line);}
+  .invoice-preview .inv-title, .invoice-preview .co{font-family:var(--serif); font-weight:700;}
+
+  .section-head select{width:auto; min-width:170px; max-width:100%;}
+  td.tag-small, td .tag-small{white-space:nowrap;}
+  td.center{white-space:nowrap;} td.center .btn + .btn{margin-left:4px;}
+  .section-head .toolbar{margin-left:auto;}
+
+  /* ---- Tablet & HP ---- */
+  @media (max-width:980px){
+    .sidebar{width:68px; flex-basis:68px;}
+    .brand{justify-content:center; padding:18px 0;} .brand .txt{display:none;}
+    .navlist{padding:0 8px;} .navlist button{justify-content:center; padding:10px 0;}
+    .navlist button.active::before{left:-8px;}
+    .navgroup-label{display:none;}
+    .topbar{padding:12px 18px;} .content{padding:20px 16px 64px;}
+    .topbar h1{font-size:23px;}
+    .cards{grid-template-columns:repeat(2,1fr);} .cards .card{border-bottom:1px solid var(--line-soft);}
+    .uchip .who{display:none;} .uchip{padding:3px;}
+  }
+  @media (max-width:640px){
+    .sidebar{width:56px; flex-basis:56px;} .brand .mono{flex-basis:34px; width:34px; height:34px; font-size:15px;}
+    .topbar > div:last-child{flex-wrap:wrap; gap:10px;}
+    .top-right{width:100%; align-items:flex-start;} #roleSwitcher{justify-content:flex-start;}
+    .top-right .period{display:none;}
+    .topbar-toolrow{gap:4px !important;}
+  }
+  @media (max-width:560px){
+    .cards{grid-template-columns:1fr;} .cards .card{border-right:0;}
+    .section-head, .section-body{padding-left:16px; padding-right:16px;}
+  }
+  @media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important;} }
+  @media print{ body{background:#fff;} .cards, .card, .section{box-shadow:none;} }
 </style>
 </head>
 <body>
@@ -410,8 +563,9 @@
 
   <aside class="sidebar">
     <div class="brand">
-      <div class="mark">Buku Akuntansi</div>
-      <div class="sub" id="brandCompany">Sistem Pembukuan Sederhana</div>
+      <div class="mono" id="brandMono">BA</div>
+      <div class="txt"><div class="mark" id="brandName">Buku Akuntansi</div>
+      <div class="sub" id="brandCompany">Sistem Pembukuan Sederhana</div></div>
     </div>
     <ul class="navlist" id="navlist">
       <li class="navgroup-label">Ringkasan</li>
@@ -472,18 +626,18 @@
         <div class="spacer"></div>
         <select id="yearSwitcher" onchange="DB.activeYear=parseInt(this.value,10); renderCurrent();" style="font-size:11.5px; padding:4px 8px; width:auto;" title="Tahun buku yang sedang dilihat — memengaruhi Laporan Bulanan, Penyusutan, dan laporan lain berbasis tahun fiskal">
         </select>
-        <button id="undoBtn" class="btn btn-outline btn-sm no-print" style="display:none;" onclick="undoLastAction()" title="Urungkan aksi terakhir">&#8617; Urungkan</button>
-        <button id="redoBtn" class="btn btn-outline btn-sm no-print" style="display:none;" onclick="redoLastAction()" title="Ulangi aksi yang baru diurungkan">&#8618; Ulangi</button>
-        <button class="btn btn-outline btn-sm no-print" onclick="exportBackupJSON()" title="Unduh seluruh data sebagai file cadangan">&#128190; Backup <span id="unsavedBadge"></span></button>
-        <button class="btn btn-outline btn-sm no-print" onclick="triggerImportBackup()" title="Muat data dari file cadangan">&#128193; Muat Cadangan</button>
-        <span id="roleSwitcher" style="display:inline-flex; align-items:center; gap:8px; font-size:12px;"></span>
+        <button id="undoBtn" class="btn btn-outline btn-sm no-print" style="display:none;" onclick="undoLastAction()" title="Urungkan aksi terakhir"><svg class="bi" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg> Urungkan</button>
+        <button id="redoBtn" class="btn btn-outline btn-sm no-print" style="display:none;" onclick="redoLastAction()" title="Ulangi aksi yang baru diurungkan"><svg class="bi" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg> Ulangi</button>
+        <button class="btn btn-outline btn-sm no-print" onclick="exportBackupJSON()" title="Unduh seluruh data sebagai file cadangan"><svg class="bi" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg> Backup <span id="unsavedBadge"></span></button>
+        <button class="btn btn-outline btn-sm no-print" onclick="triggerImportBackup()" title="Muat data dari file cadangan"><svg class="bi" viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg> Muat Cadangan</button>
       </div>
       <div style="display:flex; align-items:baseline; justify-content:space-between;">
         <div>
           <h1 id="topTitle">Dashboard</h1>
           <div class="desc" id="topDesc">Ringkasan posisi keuangan perusahaan</div>
         </div>
-        <div style="text-align:right;">
+        <div class="top-right">
+          <span id="roleSwitcher"></span>
           <div class="period" id="topPeriod"></div>
         </div>
       </div>
@@ -1198,8 +1352,10 @@ function syncRoleSwitcher(){
   if (!el) return;
   if (!authProfile){ el.innerHTML = ''; return; }
   const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
-  el.innerHTML = '<span title="' + esc(authProfile.email||'') + '">&#128100; ' + esc(authProfile.name||authProfile.email||'') +
-    (authCompany ? ' &mdash; <strong>' + esc(authCompany.name) + '</strong> (' + (roleLabel[authCompany.role]||authCompany.role) + ')' : '') + '</span>' +
+  const nm = authProfile.name || authProfile.email || '';
+  const ini = nm.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0].toUpperCase()).join('') || '?';
+  el.innerHTML = '<span class="uchip" title="' + esc(authProfile.email||'') + '"><span class="av">' + esc(ini) + '</span><span class="who"><b>' + esc(nm) + '</b><small>' +
+    (authCompany ? esc(authCompany.name) + ' &middot; ' + (roleLabel[authCompany.role]||authCompany.role) : '') + '</small></span></span>' +
     '<button class="btn btn-outline btn-sm no-print" onclick="authSwitchCompany()">Ganti Perusahaan</button>' +
     (isSysOwner() ? '<button class="btn btn-outline btn-sm no-print" onclick="authOpenManage()">Kelola Pengguna</button>' : '') +
     '<button class="btn btn-outline btn-sm no-print" onclick="authLogout()">Keluar</button>';
@@ -1510,6 +1666,7 @@ function renderCurrent(){
   if (isViewer() && !ALLOWED_TABS_USER.includes(currentTab)) currentTab = 'dashboard';
   if (OWNER_ONLY_TABS.includes(currentTab) && !isOwner()) currentTab = 'dashboard';
   document.getElementById('brandCompany').textContent = DB.company.name || 'Sistem Pembukuan Sederhana';
+  (function(){ const m = document.getElementById('brandMono'); if (m){ const nm = (DB.company.name||'BA').replace(/^(PT|CV|UD|PD)\.?\s+/i,''); m.textContent = (nm.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('') || 'BA').toUpperCase(); } })();
   document.getElementById('topPeriod').textContent = 'Tahun fiskal mulai ' + fmtDate(DB.company.fiscalStart);
   const rs = document.getElementById('roleSwitcher');
   if (rs) syncRoleSwitcher();
@@ -5129,6 +5286,42 @@ async function authRemoveMember(uid){
   } catch(e){ alert('Gagal menghapus akses: ' + e.message); }
   authMembersT = Date.now(); await authLoadMembers();
 }
+
+
+/* ---------------- Ikon navigasi (SVG garis tipis, seragam) ---------------- */
+const NAV_ICONS = {
+  dashboard:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+  setup:'<path d="M6 22V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v18"/><path d="M6 12H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2"/><path d="M18 9h2a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>',
+  coa:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  jurnalkas:'<path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0 0 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><path d="M16 13h2"/>',
+  jurnalpenjualan:'<path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+  jurnalpembelian:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.7 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5.1"/>',
+  jurnalpenyesuaian:'<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/>',
+  jurnal:'<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6M9 17h4"/>',
+  ledger:'<path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/>',
+  labarugi:'<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+  neraca:'<path d="M12 3v18M7 21h10M4 7h16"/><path d="m4 7-2.5 7a3.5 3.5 0 0 0 5 0z"/><path d="m20 7-2.5 7a3.5 3.5 0 0 0 5 0z"/>',
+  aruskas:'<path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/>',
+  ekuitas:'<path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/>',
+  penyusutan:'<path d="M22 17l-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>',
+  inventory:'<path d="M11 21.7a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7z"/><path d="M12 22V12M3.3 7 12 12l8.7-5"/>',
+  invoice:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M15 8h-5a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8M12 6v2M12 16v2"/>',
+  rekonsiliasi:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  anggaran:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  pajak:'<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
+  auditlog:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/>',
+  trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  cabang:'<path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+  pengaturan:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'
+};
+function applyNavIcons(){
+  document.querySelectorAll('#navlist button[data-tab]').forEach(function(b){
+    const ic = b.querySelector('.ic'); const d = NAV_ICONS[b.dataset.tab];
+    if (ic && d) ic.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>';
+    else if (ic) ic.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2"/></svg>';
+  });
+}
+applyNavIcons();
 
 /* ================= Init ================= */
 loadSupaConfig();
