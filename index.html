@@ -556,6 +556,47 @@
   }
   @media (prefers-reduced-motion:reduce){ *{transition:none !important; animation:none !important;} }
   @media print{ body{background:#fff;} .cards, .card, .section{box-shadow:none;} }
+  .onb{background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:18px; box-shadow:0 1px 2px rgba(20,33,61,.04);}
+  .onb-head{display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;}
+  .onb-title{font-family:Fraunces,Georgia,serif; font-size:19px; font-weight:600; color:var(--navy-900);}
+  .onb-sub{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+  .onb-bar{height:6px; background:var(--line); border-radius:99px; margin:12px 0 6px; overflow:hidden;}
+  .onb-bar span{display:block; height:100%; background:var(--amber); border-radius:99px;}
+  .onb-list{list-style:none; margin:0; padding:0;}
+  .onb-step{display:flex; gap:14px; align-items:center; padding:12px 0; border-top:1px solid var(--line);}
+  .onb-step:first-child{border-top:0;}
+  .onb-dot{flex:none; width:24px; height:24px; border-radius:50%; border:2px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:13px; color:#fff;}
+  .onb-step.done .onb-dot{background:var(--green); border-color:var(--green);}
+  .onb-step.done .onb-t{color:var(--ink-soft); text-decoration:line-through;}
+  .onb-txt{flex:1; min-width:0;}
+  .onb-t{font-weight:600; font-size:14px;}
+  .onb-d{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
+  .onb-act{flex:none; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
+  @media (max-width:640px){ .onb-step{flex-wrap:wrap;} .onb-act{width:100%; justify-content:flex-start; padding-left:38px;} }
+  td .pill{white-space:nowrap;}
+  .filters{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;}
+  .filters .field{margin:0; min-width:150px; flex:1 1 150px; max-width:240px;}
+  .filters .field input,.filters .field select{width:100%;}
+  .print-only{display:none;}
+  @media print{
+    .print-only{display:block !important;}
+    .print-only.kop{display:flex !important; align-items:center; gap:16px; border-bottom:3px double #14213D; padding-bottom:10px; margin-bottom:10px;}
+    .stmt-head .co{display:none;}
+    .kop-logo{max-height:64px; max-width:150px; object-fit:contain;}
+    .kop-name{font-family:Fraunces,Georgia,serif; font-size:20px; font-weight:700; color:#14213D;}
+    .kop-meta{font-size:11px; color:#444; margin-top:2px;}
+    .kop-title{text-align:center; margin:6px 0 14px;}
+    .kop-title .t{font-size:16px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;}
+    .kop-title .s{font-size:12px; color:#444; margin-top:2px;}
+    .sign{margin-top:34px; page-break-inside:avoid;}
+    .sign-place{text-align:right; font-size:12px; margin-bottom:6px;}
+    .sign-cols{display:flex; justify-content:space-between; gap:40px;}
+    .sign-col{width:44%; text-align:center; font-size:12px;}
+    .sign-space{height:70px; display:flex; align-items:center; justify-content:center;}
+    .sign-space img{max-height:64px; max-width:200px;}
+    .sign-name{border-top:1px solid #222; padding-top:4px; font-weight:600; min-height:18px;}
+    .sign-title{font-size:11px; color:#444;}
+  }
 </style>
 </head>
 <body>
@@ -601,9 +642,13 @@
       <li class="navgroup-label">Analisis &amp; Kontrol</li>
       <li><button data-tab="rekonsiliasi"><span class="ic">&#128257;</span><span class="lbl">Rekonsiliasi Bank</span></button></li>
       <li><button data-tab="anggaran"><span class="ic">&#127919;</span><span class="lbl">Anggaran vs Realisasi</span></button></li>
-      <li><button data-tab="pajak"><span class="ic">&#128220;</span><span class="lbl">Kalkulator Pajak</span></button></li>
-      <li><button data-tab="auditlog"><span class="ic">&#128269;</span><span class="lbl">Audit Log</span></button></li>
+      <li><button data-tab="pajak"><span class="ic">&#128220;</span><span class="lbl">Pajak (PPN &amp; PPh)</span></button></li>
+      <li><button data-tab="auditlog"><span class="ic">&#128269;</span><span class="lbl">Log Aktivitas</span></button></li>
       <li><button data-tab="trash"><span class="ic">&#128465;</span><span class="lbl">Riwayat Terhapus</span></button></li>
+
+      <li class="navgroup-label">Data &amp; Cadangan</li>
+      <li><button data-tab="excel"><span class="ic">&#128196;</span><span class="lbl">Impor / Ekspor Excel</span></button></li>
+      <li><button data-tab="versi"><span class="ic">&#128339;</span><span class="lbl">Riwayat Versi</span></button></li>
 
       <li class="navgroup-label">Pengaturan Lanjutan</li>
       <li><button data-tab="cabang"><span class="ic">&#127970;</span><span class="lbl">Cabang / Gudang</span></button></li>
@@ -705,6 +750,9 @@ const DB = {
   users: [{id:'owner', name:'Pemilik Usaha', role:'owner'}, {id:'admin', name:'Admin', role:'admin'}, {id:'staff', name:'Staff', role:'staff'}, {id:'user', name:'User', role:'user'}],
   activeUser: 'admin',
   activeYear: 2026,
+  taxSettings: {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false},   // tarif PPN & akun PPN & opsi UMKM
+  onboarding: {dismissed:true, team:false},   // panduan awal perusahaan baru
+  lockedUntil: '',   // 'YYYY-MM': semua transaksi sampai akhir bulan ini terkunci
   closedYears: []   // tahun fiskal yang sudah "ditutup" lewat menu Setup — mengunci tanggal transaksi pada tahun tsb
 };
 
@@ -718,7 +766,7 @@ function logAudit(action, target, detail){
     action, target, detail: detail || ''
   });
   // batasi log agar tidak tak terbatas
-  if (DB.auditLog.length > 500) DB.auditLog.splice(0, DB.auditLog.length-500);
+  if (DB.auditLog.length > 2000) DB.auditLog.splice(0, DB.auditLog.length-2000);
   unsavedChangeCount++;
   if (typeof scheduleAutoSync === 'function') scheduleAutoSync();
 }
@@ -727,7 +775,7 @@ function logAudit(action, target, detail){
    Catatan: aplikasi ini TIDAK memakai localStorage/sessionStorage (dibatasi platform),
    sehingga cara paling aman menjaga data adalah mengunduh cadangan berkala. */
 let unsavedChangeCount = 0;
-const BACKUP_KEYS = ['company','coa','journal','fixedAssets','inventoryItems','stockMoves','invoices','counters','branches','auditLog','budgets','bankRecon','users','activeUser','activeYear','closedYears'];
+const BACKUP_KEYS = ['company','coa','journal','fixedAssets','inventoryItems','stockMoves','invoices','counters','branches','auditLog','budgets','bankRecon','users','activeUser','activeYear','closedYears','lockedUntil','taxSettings','onboarding'];
 function exportBackupJSON(){
   const snapshot = {};
   BACKUP_KEYS.forEach(k => { snapshot[k] = DB[k]; });
@@ -765,6 +813,9 @@ function handleImportBackup(input){
       input.value=''; return;
     }
     BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = data[k]; });
+    if (data.lockedUntil === undefined) DB.lockedUntil = '';
+    if (data.onboarding === undefined) DB.onboarding = {dismissed:true, team:false};
+    if (data.taxSettings === undefined) DB.taxSettings = {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false};
     unsavedChangeCount = 0;
     logAuditSilent('Backup', 'Impor Cadangan Data', 'Dipulihkan dari file ' + file.name);
     input.value = '';
@@ -843,6 +894,7 @@ async function supaPush(silent){
   if (!supaConfigured()){ if(!silent) alert('Lengkapi dulu Pengaturan Supabase di menu Pengaturan Sistem.'); return false; }
   if (!silent) setSupaStatus('busy', 'Menyimpan ke cloud…');
   try {
+    await versiAutoBeforePush();
     const snapshot = {};
     BACKUP_KEYS.forEach(k => { snapshot[k] = DB[k]; });
     const base = supaConfig.url.replace(/\/+$/,'') + '/rest/v1/' + encodeURIComponent(supaConfig.table);
@@ -923,6 +975,9 @@ async function supaPull(silent){
     }
     if (!silent && !confirm('Memuat dari cloud akan MENGGANTI seluruh data yang sedang berjalan sekarang. Lanjutkan?')) return false;
     BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = data[k]; });
+    if (data.lockedUntil === undefined) DB.lockedUntil = '';
+    if (data.onboarding === undefined) DB.onboarding = {dismissed:true, team:false};
+    if (data.taxSettings === undefined) DB.taxSettings = {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false};
     supaVersion = rows[0].updated_at;
     unsavedChangeCount = 0;
     setSupaStatus('ok', 'Dimuat dari cloud — terakhir disimpan ' + new Date(rows[0].updated_at).toLocaleString('id-ID') + '.');
@@ -1094,6 +1149,7 @@ function journalTotals(j){
 }
 
 function addJournalEntry({date, ref, desc, branch, note, lines, source}){
+  if (isPeriodLocked(date || todayISO())) throw new Error(periodLockMsg(date || todayISO()));
   DB.counters.journal += 1;
   const staffCreated = isStaff();
   const entry = {
@@ -1116,6 +1172,7 @@ function addJournalEntry({date, ref, desc, branch, note, lines, source}){
 function approveJournal(id){
   const j = DB.journal.find(x=>x.id===id);
   if (!j) return;
+  if (!guardPeriod(j.date)) return;
   snapshotForUndo('Setujui Jurnal');
   j.status = 'posted';
   logAudit('Setujui', 'Jurnal JU-' + String(j.no).padStart(3,'0'), j.desc);
@@ -1387,6 +1444,7 @@ function fiscalYearBoundsForYear(year){
 function isYearClosed(year){ return DB.closedYears.includes(year); }
 function confirmFiscalDate(dateStr){
   if (!dateStr) return true;
+  if (isPeriodLocked(dateStr)){ alert(periodLockMsg(dateStr)); return false; }
   const year = parseInt(dateStr.slice(0,4), 10);
   if (isYearClosed(year)){
     if (!isOwner()){
@@ -1641,17 +1699,21 @@ const TAB_META = {
   invoice: {title:'Invoice Penjualan', desc:'Buat faktur penjualan dan posting otomatis ke jurnal & stok'},
   rekonsiliasi: {title:'Rekonsiliasi Bank', desc:'Cocokkan catatan Anda dengan mutasi asli di rekening bank, langkah demi langkah'},
   anggaran: {title:'Anggaran vs Realisasi', desc:'Bandingkan target anggaran bulanan dengan realisasi Laba Rugi'},
-  pajak: {title:'Kalkulator Pajak', desc:'Estimasi PPh Final UMKM, PPh 21, dan PPh 23 — bukan pengganti perhitungan resmi'},
-  auditlog: {title:'Audit Log', desc:'Riwayat aktivitas: siapa mengubah apa dan kapan'},
+  pajak: {title:'Pajak', desc:'Rekap PPN, hitung PPh 21 (TER), PPh 23, dan PPh Final UMKM. Bukan pengganti perhitungan resmi'},
+  auditlog: {title:'Log Aktivitas', desc:'Riwayat aktivitas: siapa mengubah apa dan kapan'},
+  excel: {title:'Impor / Ekspor Excel', desc:'Unduh laporan ke Excel dan impor akun, saldo awal, serta jurnal dari file Excel'},
+  versi: {title:'Riwayat Versi & Backup', desc:'Salinan data di cloud — pulihkan bila ada yang salah hapus atau salah ubah'},
   trash: {title:'Riwayat Terhapus', desc:'Jurnal yang dihapus — dapat dipulihkan sebelum dihapus permanen'},
   cabang: {title:'Cabang / Gudang', desc:'Kelola daftar cabang atau gudang untuk pelaporan tersegmentasi'},
   pengaturan: {title:'Pengaturan Sistem', desc:'Anggota perusahaan & peran, serta tutup/buka tahun fiskal — khusus Owner'}
 };
 
 const OWNER_ONLY_TABS = ['pengaturan'];
+const ADMIN_ONLY_TABS = ['versi'];
 function switchTab(tab){
   if (isViewer() && !ALLOWED_TABS_USER.includes(tab)) tab = 'dashboard';
   if (OWNER_ONLY_TABS.includes(tab) && !isOwner()) tab = 'dashboard';
+  if (ADMIN_ONLY_TABS.includes(tab) && !isAdminLevel()) tab = 'dashboard';
   currentTab = tab;
   renderCurrent();
   if (typeof window.scrollTo === 'function') window.scrollTo({top:0, behavior:'instant'});
@@ -1665,6 +1727,7 @@ function renderCurrent(){
   autoPostDueDepreciation();
   if (isViewer() && !ALLOWED_TABS_USER.includes(currentTab)) currentTab = 'dashboard';
   if (OWNER_ONLY_TABS.includes(currentTab) && !isOwner()) currentTab = 'dashboard';
+  if (ADMIN_ONLY_TABS.includes(currentTab) && !isAdminLevel()) currentTab = 'dashboard';
   document.getElementById('brandCompany').textContent = DB.company.name || 'Sistem Pembukuan Sederhana';
   (function(){ const m = document.getElementById('brandMono'); if (m){ const nm = (DB.company.name||'BA').replace(/^(PT|CV|UD|PD)\.?\s+/i,''); m.textContent = (nm.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('') || 'BA').toUpperCase(); } })();
   document.getElementById('topPeriod').textContent = 'Tahun fiskal mulai ' + fmtDate(DB.company.fiscalStart);
@@ -1691,7 +1754,7 @@ function renderCurrent(){
     aruskas: renderArusKas, ekuitas: renderEkuitas,
     penyusutan: renderPenyusutan, inventory: renderInventory, invoice: renderInvoice,
     rekonsiliasi: renderRekonsiliasi, anggaran: renderAnggaran, pajak: renderPajak,
-    auditlog: renderAuditLog, trash: renderTrash, cabang: renderCabang, pengaturan: renderPengaturan
+    auditlog: renderAuditLog, excel: renderExcel, versi: renderVersi, trash: renderTrash, cabang: renderCabang, pengaturan: renderPengaturan
   };
   (fns[currentTab] || renderDashboard)();
   applySidebarVisibility();
@@ -1707,7 +1770,7 @@ function applySidebarVisibility(){
     const btn = li.querySelector('button[data-tab]');
     if (btn){
       const tab = btn.dataset.tab;
-      const allowed = (!viewer || ALLOWED_TABS_USER.includes(tab)) && (!OWNER_ONLY_TABS.includes(tab) || owner);
+      const allowed = (!viewer || ALLOWED_TABS_USER.includes(tab)) && (!OWNER_ONLY_TABS.includes(tab) || owner) && (!ADMIN_ONLY_TABS.includes(tab) || isAdminLevel());
       li.style.display = allowed ? '' : 'none';
     }
   });
@@ -1750,7 +1813,10 @@ function applyViewerLock(){
   });
 }
 
-function setContent(html){ document.getElementById('content').innerHTML = html; }
+function setContent(html){
+  const withKop = (typeof PRINT_TABS !== 'undefined') && PRINT_TABS.includes(currentTab);
+  document.getElementById('content').innerHTML = withKop ? printKopHtml(html.indexOf('stmt-head') >= 0) + html + printSignHtml() : html;
+}
 
 /* ---------------- Journal source labels ---------------- */
 const SOURCE_LABELS = {
@@ -1823,7 +1889,7 @@ function renderDashboard(){
   const recent = activeJournal().slice().sort((a,b)=> (b.date+b.no) > (a.date+a.no) ? 1 : -1).slice(0,6);
   const pendingCount = DB.journal.filter(j=>!j.deleted && j.status==='pending').length;
 
-  const cards = `${authPendingBannerHtml()}
+  const cards = `${authPendingBannerHtml()}${authMfaBannerHtml()}${onboardingHtml()}
     <div class="cards">
       <div class="card"><div class="label">Total Aset</div><div class="value">${fmtRp(nr.totalAset)}</div></div>
       <div class="card"><div class="label">Total Kewajiban + Modal</div><div class="value">${fmtRp(nr.totalKM)}</div></div>
@@ -1909,6 +1975,7 @@ function renderSetup(){
         <button class="btn btn-primary" onclick="saveSetup()">Simpan Profil</button>
       </div>
     </div>
+    ${kopSectionHtml()}
     <div class="section">
       <div class="section-head"><div><h2>Peran Pengguna</h2><div class="hint">Anda sedang masuk sebagai: <strong>${esc((DB.users.find(u=>u.id===DB.activeUser)||{}).name || DB.activeUser)}</strong> (${roleLabel[currentRole()]||currentRole()})</div></div></div>
       <div class="section-body">
@@ -1926,6 +1993,7 @@ function renderSetup(){
     <div class="section">
       <div class="section-head"><div><h2>Keamanan Akun</h2><div class="hint">Akun: <strong>${esc((authProfile&&authProfile.email)||'-')}</strong></div></div></div>
       <div class="section-body">
+        <div style="margin-bottom:18px;"><div style="font-weight:600; margin-bottom:8px;">Verifikasi 2 langkah</div>${mfaSectionHtml()}</div>
         <button class="btn btn-outline" onclick="authLogout()">Keluar</button>
         <button class="btn btn-danger" onclick="authLogout(true)">Keluar dari Semua Device</button>
         <div class="hint" style="margin-top:8px;">"Keluar dari Semua Device" mengakhiri sesi di semua perangkat, termasuk yang sedang dipakai sekarang.</div>
@@ -1976,6 +2044,7 @@ function renderPengaturan(){
         <button class="btn btn-primary" onclick="savePengaturanFiscal()">Simpan Tanggal Fiskal</button>
       </div>
     </div>
+    ${periodLockHtml()}
     <div class="section">
       <div class="section-head"><div><h2>Tutup Tahun Fiskal</h2><div class="hint">Kunci suatu tahun buku agar tidak ada transaksi baru yang bisa masuk secara tidak sengaja — hanya Owner yang bisa melakukan ini</div></div></div>
       <div class="section-body">
@@ -2259,7 +2328,7 @@ function renderJurnal(){
   const trashCount = DB.journal.filter(j=>j.deleted).length;
   const pendingBanner = pendingCount ? `<div class="balance-check bad" style="margin-bottom:14px;">&#9203; ${pendingCount} jurnal dibuat oleh Staff sedang menunggu persetujuan Admin — belum masuk ke laporan keuangan manapun.</div>` : '';
 
-  setContent(`
+  setContent(periodLockBanner() + `
     <div class="section">
       <div class="section-head">
         <div><h2>Rekap Jurnal Umum</h2><div class="hint">${rows.length} entri &middot; gabungan seluruh transaksi dari semua jurnal khusus, secara kronologis</div></div>
@@ -2383,6 +2452,7 @@ function viewJournal(id){
 function deleteJournal(id){
   const j = DB.journal.find(x=>x.id===id);
   if (!j) return;
+  if (!guardPeriod(j.date)) return;
   if (j.source && j.source !== 'manual'){
     if (!confirm('Jurnal ini dibuat otomatis dari modul lain (' + (SOURCE_LABELS[j.source]||j.source) + '). Menghapusnya tidak akan membatalkan transaksi sumbernya (mis. mutasi stok). Lanjutkan?')) return;
   } else if (!confirm('Hapus jurnal ini? Entri yang dihapus masih bisa dipulihkan lewat menu "Riwayat Terhapus".')) return;
@@ -2395,6 +2465,7 @@ function deleteJournal(id){
 function restoreJournal(id){
   const j = DB.journal.find(x=>x.id===id);
   if (!j) return;
+  if (!guardPeriod(j.date)) return;
   snapshotForUndo('Pulihkan Jurnal');
   j.deleted = false;
   delete j.deletedAt;
@@ -2404,6 +2475,7 @@ function restoreJournal(id){
 function purgeJournal(id){
   const j = DB.journal.find(x=>x.id===id);
   if (!j) return;
+  if (!guardPeriod(j.date)) return;
   if (!confirm('Hapus permanen jurnal ini? Tindakan ini TIDAK dapat dibatalkan lagi.')) return;
   snapshotForUndo('Hapus Permanen Jurnal');
   DB.journal = DB.journal.filter(x=>x.id!==id);
@@ -2776,7 +2848,7 @@ function autoPostDueDepreciation(){
       const amt = monthlyDepFor(fa, mk);
       if (amt <= 0) return;
       const monthEnd = lastDayOfMonthISO(mk);
-      if (monthEnd <= today){
+      if (monthEnd <= today && !isPeriodLocked(monthEnd)){
         const entry = addJournalEntry({
           date: monthEnd,
           ref: 'PNY-' + fa.code + '-' + mk,
@@ -3140,6 +3212,10 @@ function openInvoiceModal(){
       <div class="field"><label>Tanggal Faktur</label><input type="date" id="iv_date" value="${todayISO()}"></div>
       <div class="field"><label>Nama Pelanggan</label><input id="iv_customer" placeholder="cth. Toko Sumber Rejeki"></div>
     </div>
+    <div class="row">
+      <div class="field"><label>NPWP / NIK Pelanggan (opsional)</label><input id="iv_npwp" placeholder="Untuk faktur pajak"></div>
+      <div class="field"><label>No. Faktur Pajak (opsional)</label><input id="iv_faktur" placeholder="cth. 0100000000000001"></div>
+    </div>
     <label>Item Produk</label>
     <div class="je-lines">
       <table>
@@ -3149,7 +3225,7 @@ function openInvoiceModal(){
       <div class="je-add-row"><button class="btn btn-outline btn-sm" onclick="ivAddLine()">+ Tambah Item</button></div>
     </div>
     <div class="field" style="max-width:220px;">
-      <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="iv_ppn" style="width:auto;" onchange="ivRenderTotals()"> Kenakan PPN 10%</label>
+      <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="iv_ppn" style="width:auto;" onchange="ivRenderTotals()"> Kenakan PPN ${ppnLabel()}%</label>
     </div>
     <div id="iv_totals" style="margin-bottom:14px;"></div>
     <div class="section-head" style="padding:0; border:none;"><h2 style="font-size:14px;">Pemetaan Akun Jurnal</h2></div>
@@ -3211,7 +3287,7 @@ function ivComputeTotals(){
   invDraft.forEach(l => { const lt = l.qty*l.price; subtotal += lt; disc += lt*(l.discPct||0)/100; });
   const dpp = subtotal - disc;
   const ppnChecked = document.getElementById('iv_ppn') ? document.getElementById('iv_ppn').checked : false;
-  const ppn = ppnChecked ? dpp * 0.10 : 0;
+  const ppn = ppnChecked ? Math.round(dpp * ppnFrac()) : 0;
   return {subtotal, disc, dpp, ppn, grand: dpp+ppn};
 }
 function ivRenderTotals(){
@@ -3223,7 +3299,7 @@ function ivRenderTotals(){
       <tr><td>Subtotal</td><td class="num">${fmtRp(t.subtotal)}</td></tr>
       <tr><td>Diskon</td><td class="num">${fmtRp(t.disc)}</td></tr>
       <tr><td>DPP</td><td class="num">${fmtRp(t.dpp)}</td></tr>
-      <tr><td>PPN 10%</td><td class="num">${fmtRp(t.ppn)}</td></tr>
+      <tr><td>PPN ${ppnLabel()}%</td><td class="num">${fmtRp(t.ppn)}</td></tr>
       <tr class="tot"><td>Total Tagihan</td><td class="num">${fmtRp(t.grand)}</td></tr>
     </table>`;
 }
@@ -3239,6 +3315,8 @@ function saveInvoice(){
   const term = document.getElementById('iv_term').value.trim();
   const due = document.getElementById('iv_due').value;
   const note = document.getElementById('iv_note').value.trim();
+  const customerNpwp = document.getElementById('iv_npwp').value.trim();
+  const fakturNo = document.getElementById('iv_faktur').value.trim();
 
   const items = invDraft.filter(l => l.code && l.qty > 0);
   if (!items.length){ alert('Tambahkan minimal satu item produk dengan jumlah lebih dari nol.'); return; }
@@ -3288,7 +3366,7 @@ function saveInvoice(){
   }
 
   DB.invoices.push({
-    id: uid('inv'), no: invNo, date, customer, items, ppn: ppnChecked,
+    id: uid('inv'), no: invNo, date, customer, customerNpwp, fakturNo, items, ppn: ppnChecked, ppnRate: ppnChecked ? ppnRate() : 0,
     subtotal: t.subtotal, disc: t.disc, dpp: t.dpp, ppnAmount: t.ppn, grand: t.grand,
     term, dueDate: due, note, journalIds, cogs: totalCogs
   });
@@ -3313,6 +3391,7 @@ function invoiceBodyHtml(inv){
     <div class="invoice-preview">
       <div class="ihead">
         <div>
+          ${DB.company.logo ? `<img src="${esc(DB.company.logo)}" alt="" style="max-height:56px; max-width:150px; display:block; margin-bottom:6px;">` : ''}
           <div class="co">${esc(DB.company.name)}</div>
           <div class="addr">${esc(DB.company.address)}<br>${esc(DB.company.city)}, ${esc(DB.company.province)}</div>
         </div>
@@ -3323,6 +3402,7 @@ function invoiceBodyHtml(inv){
       </div>
       <div class="row" style="margin-bottom:14px;">
         <div class="field"><label>Ditagihkan kepada</label><div><strong>${esc(inv.customer)}</strong></div></div>
+        ${(inv.customerNpwp || inv.fakturNo) ? `<div class="field"><label>NPWP/NIK &middot; Faktur Pajak</label><div>${esc(inv.customerNpwp||'-')} &middot; ${esc(inv.fakturNo||'-')}</div></div>` : ''}
         <div class="field"><label>Termin</label><div>${esc(inv.term)||'-'}</div></div>
         <div class="field"><label>Jatuh Tempo</label><div>${inv.dueDate?fmtDate(inv.dueDate):'-'}</div></div>
       </div>
@@ -3334,7 +3414,7 @@ function invoiceBodyHtml(inv){
         <tr><td>Subtotal</td><td class="num">${fmtRp(inv.subtotal)}</td></tr>
         <tr><td>Diskon</td><td class="num">${fmtRp(inv.disc)}</td></tr>
         <tr><td>DPP</td><td class="num">${fmtRp(inv.dpp)}</td></tr>
-        <tr><td>PPN 10%</td><td class="num">${fmtRp(inv.ppnAmount)}</td></tr>
+        <tr><td>PPN ${inv.ppnRate != null ? inv.ppnRate : 10}%</td><td class="num">${fmtRp(inv.ppnAmount)}</td></tr>
         <tr class="tot"><td>Total Tagihan</td><td class="num">${fmtRp(inv.grand)}</td></tr>
       </table>
       ${inv.note?`<div class="hint" style="margin-top:14px;">Catatan: ${esc(inv.note)}</div>`:''}
@@ -3623,7 +3703,7 @@ function openPenjualanModal(){
     <div class="row">
       <div class="field"><label>Jumlah Penjualan (DPP)</label><input type="number" id="pj_amount" value="0" onchange="pjRenderTotals()"></div>
       <div class="field">
-        <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="pj_ppn" style="width:auto;" onchange="pjRenderTotals()"> Kenakan PPN 10%</label>
+        <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="pj_ppn" style="width:auto;" onchange="pjRenderTotals()"> Kenakan PPN ${ppnLabel()}%</label>
         <select id="pj_ppn_acc" style="margin-top:6px;">${acctOptionsFiltered(['Kewajiban'], ppnAcc)}</select>
       </div>
     </div>
@@ -3641,7 +3721,7 @@ function openPenjualanModal(){
 function pjRenderTotals(){
   const amount = parseNum(document.getElementById('pj_amount').value);
   const ppnOn = document.getElementById('pj_ppn').checked;
-  const ppn = ppnOn ? amount*0.10 : 0;
+  const ppn = ppnOn ? Math.round(amount*ppnFrac()) : 0;
   document.getElementById('pj_totals').innerHTML = `<div class="balance-check ok">DPP ${fmtRp(amount)} &nbsp;+&nbsp; PPN ${fmtRp(ppn)} &nbsp;=&nbsp; Total ${fmtRp(amount+ppn)}</div>`;
 }
 function savePenjualan(){
@@ -3659,7 +3739,7 @@ function savePenjualan(){
   if (amount <= 0){ alert('Jumlah penjualan harus lebih dari nol.'); return; }
   if (ppnOn && !ppnAcc){ alert('Pilih akun PPN Keluaran atau nonaktifkan PPN.'); return; }
   if (!confirmFiscalDate(date)) return;
-  const ppn = ppnOn ? amount*0.10 : 0;
+  const ppn = ppnOn ? Math.round(amount*ppnFrac()) : 0;
   const lines = [{account:debitAcc, debit:amount+ppn, kredit:0}, {account:creditAcc, debit:0, kredit:amount}];
   if (ppn>0) lines.push({account:ppnAcc, debit:0, kredit:ppn});
   snapshotForUndo('Tambah Jurnal Penjualan');
@@ -3744,7 +3824,7 @@ function openPembelianModal(){
     <div class="row">
       <div class="field"><label>Akun Kredit (Kas/Bank atau Utang Dagang)</label><select id="pb_credit_acc">${acctOptionsFiltered(['Aset','Kewajiban'], creditAcc)}</select></div>
       <div class="field">
-        <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="pb_ppn" style="width:auto;" onchange="pbRenderTotals()"> Ada PPN Masukan 10%</label>
+        <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="pb_ppn" style="width:auto;" onchange="pbRenderTotals()"> Ada PPN Masukan ${ppnLabel()}%</label>
         <select id="pb_ppn_acc" style="margin-top:6px;">${acctOptionsFiltered(['Aset','Kewajiban'], ppnAcc)}</select>
       </div>
     </div>
@@ -3776,7 +3856,7 @@ function pbSubtotal(){
 function pbRenderTotals(){
   const sub = pbSubtotal();
   const ppnOn = document.getElementById('pb_ppn').checked;
-  const ppn = ppnOn ? sub*0.10 : 0;
+  const ppn = ppnOn ? Math.round(sub*ppnFrac()) : 0;
   document.getElementById('pb_totals').innerHTML = `<div class="balance-check ok">Subtotal ${fmtRp(sub)} &nbsp;+&nbsp; PPN Masukan ${fmtRp(ppn)} &nbsp;=&nbsp; Total Dibayar/Diutang ${fmtRp(sub+ppn)}</div>`;
 }
 function savePembelian(){
@@ -3794,7 +3874,7 @@ function savePembelian(){
   if (ppnOn && !ppnAcc){ alert('Pilih akun PPN Masukan atau nonaktifkan PPN.'); return; }
   if (pbType==='barang' && !document.getElementById('pb_item').value){ alert('Pilih produk yang dibeli.'); return; }
   if (!confirmFiscalDate(date)) return;
-  const ppn = ppnOn ? sub*0.10 : 0;
+  const ppn = ppnOn ? Math.round(sub*ppnFrac()) : 0;
   snapshotForUndo('Tambah Jurnal Pembelian');
 
   let debitLines = [];
@@ -4122,36 +4202,6 @@ function renderEkuitasBulanan(){
           </table>
         </div>
         <div class="hint" style="margin-top:16px;">Baris "Modal Akhir Bulan" adalah saldo kumulatif sejak awal tahun fiskal sampai akhir bulan tersebut, sehingga dapat dicocokkan dengan baris "Total Modal" pada Neraca per Bulan.</div>
-      </div>
-    </div>
-  `);
-}
-
-/* ================= AUDIT LOG ================= */
-function renderAuditLog(){
-  const rows = DB.auditLog.slice().reverse();
-  const body = rows.length ? rows.map(l => `
-    <tr>
-      <td class="tag-small">${fmtDate(l.ts.slice(0,10))} ${l.ts.slice(11,16)}</td>
-      <td>${esc(l.actor)}</td>
-      <td><span class="pill pill-aset">${esc(l.action)}</span></td>
-      <td>${esc(l.target)}</td>
-      <td class="muted">${esc(l.detail)}</td>
-    </tr>`).join('') : `<tr class="empty-row"><td colspan="5">Belum ada aktivitas tercatat.</td></tr>`;
-
-  setContent(`
-    <div class="section">
-      <div class="section-head">
-        <div><h2>Audit Log</h2><div class="hint">${rows.length} aktivitas &middot; mencatat penambahan/perubahan/penghapusan jurnal, akun, dan aset tetap selama sesi ini berjalan</div></div>
-      </div>
-      <div class="section-body scrollx">
-        <table>
-          <thead><tr><th>Waktu</th><th>Pengguna</th><th>Aksi</th><th>Objek</th><th>Detail</th></tr></thead>
-          <tbody>${body}</tbody>
-        </table>
-      </div>
-      <div class="section-body" style="padding-top:0;">
-        <div class="hint">Log ini tersimpan di memori sesi (bukan basis data permanen) dan otomatis dipangkas hingga 500 entri terbaru.</div>
       </div>
     </div>
   `);
@@ -4645,122 +4695,6 @@ function renderAnggaran(){
   `);
 }
 
-/* ================= KALKULATOR PAJAK ================= */
-function pph21Simple(gajiSetahun, ptkp){
-  const kena = Math.max(gajiSetahun - ptkp, 0);
-  const brackets = [
-    [60000000, 0.05], [190000000, 0.15], [250000000, 0.25], [4150000000, 0.30], [Infinity, 0.35]
-  ];
-  let sisa = kena, pajak = 0, batasBawah = 0;
-  for (const [batasAtas, tarif] of brackets){
-    const lebar = batasAtas - batasBawah;
-    const kenaDiLapis = Math.min(sisa, lebar);
-    if (kenaDiLapis > 0) pajak += kenaDiLapis * tarif;
-    sisa -= kenaDiLapis;
-    batasBawah = batasAtas;
-    if (sisa <= 0) break;
-  }
-  return pajak;
-}
-function renderPajak(){
-  const months = fiscalMonths();
-  const curMonth = months.includes(todayISO().slice(0,7)) ? todayISO().slice(0,7) : months[0];
-  const r = monthRangeISO(curMonth);
-  const omzetBulan = DB.coa.filter(a=>a.category==='Pendapatan').reduce((s,a)=>s+accountFlowInRange(a,r.start,r.end),0);
-  const pphFinal = omzetBulan * 0.005;
-
-  setContent(`
-    <div class="section">
-      <div class="section-head"><div><h2>Kalkulator Pajak (Estimasi)</h2><div class="hint">Alat bantu perkiraan kasar — bukan pengganti perhitungan resmi DJP atau konsultan pajak</div></div></div>
-      <div class="section-body">
-        <div class="balance-check bad" style="margin-bottom:16px;">&#9888; Tarif dan aturan pajak dapat berubah sewaktu-waktu. Angka di sini hanya estimasi kasar untuk perencanaan internal — selalu verifikasi ke konsultan pajak atau aplikasi resmi DJP (Coretax) sebelum pelaporan/pembayaran.</div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><div><h2>PPh Final UMKM (0,5% dari Omzet)</h2><div class="hint">Berlaku untuk UMKM dengan omzet di bawah batas tertentu per tahun sesuai PP 55/2022 — cek kelayakan Anda ke DJP</div></div></div>
-      <div class="section-body">
-        <div class="row">
-          <div class="field"><label>Bulan</label><select id="tx_month" onchange="renderPajakOmzet(this.value)">${months.map(mk=>`<option value="${mk}" ${mk===curMonth?'selected':''}>${monthLabel(mk)}</option>`).join('')}</select></div>
-          <div class="field"><label>Omzet Bulan Ini (dari Laba Rugi)</label><input id="tx_omzet" type="number" value="${omzetBulan.toFixed(0)}" onchange="renderPajakOmzetManual(this.value)"></div>
-        </div>
-        <div class="card" style="max-width:320px;"><div class="label">Estimasi PPh Final (0,5%)</div><div class="value pos" id="tx_pphfinal">${fmtRp(pphFinal)}</div></div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><div><h2>PPh 21 Sederhana (Karyawan Tetap)</h2><div class="hint">Estimasi kasar memakai tarif progresif Pasal 17 setelah PTKP — bukan tarif TER resmi</div></div></div>
-      <div class="section-body">
-        <div class="row">
-          <div class="field"><label>Gaji Bruto per Bulan</label><input id="p21_gaji" type="number" value="5000000" onchange="calcPph21()"></div>
-          <div class="field"><label>Status PTKP</label>
-            <select id="p21_ptkp" onchange="calcPph21()">
-              <option value="54000000">TK/0 — Rp 54.000.000/tahun</option>
-              <option value="58500000">K/0 — Rp 58.500.000/tahun</option>
-              <option value="63000000">K/1 — Rp 63.000.000/tahun</option>
-              <option value="67500000">K/2 — Rp 67.500.000/tahun</option>
-              <option value="72000000">K/3 — Rp 72.000.000/tahun</option>
-            </select>
-          </div>
-        </div>
-        <div class="cards" style="grid-template-columns:repeat(2,1fr);">
-          <div class="card"><div class="label">Estimasi PPh 21 per Tahun</div><div class="value" id="p21_tahun">${fmtRp(0)}</div></div>
-          <div class="card"><div class="label">Estimasi PPh 21 per Bulan</div><div class="value" id="p21_bulan">${fmtRp(0)}</div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><div><h2>PPh 23 (2% Jasa)</h2><div class="hint">Dipotong pemberi kerja atas pembayaran jasa kepada pihak lain (bukan objek PPh Final UMKM)</div></div></div>
-      <div class="section-body">
-        <div class="row">
-          <div class="field"><label>Jumlah Bruto Jasa</label><input id="p23_jasa" type="number" value="1000000" onchange="calcPph23()"></div>
-        </div>
-        <div class="card" style="max-width:320px;"><div class="label">PPh 23 Dipotong (2%)</div><div class="value" id="p23_hasil">${fmtRp(20000)}</div></div>
-      </div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><div><h2>Referensi PPN Tercatat</h2><div class="hint">Data PPN Keluaran/Masukan yang sudah tercatat di pembukuan — sebagai referensi input manual e-Faktur (Coretax DJP)</div></div></div>
-      <div class="section-body">
-        ${(() => {
-          const ppnK = DB.coa.find(a=>a.name.toLowerCase().includes('ppn keluaran'));
-          const ppnM = DB.coa.find(a=>a.name.toLowerCase().includes('ppn masukan'));
-          const sK = ppnK ? accountBalance(ppnK) : 0;
-          const sM = ppnM ? -accountBalance(ppnM) : 0;
-          return `<div class="cards" style="grid-template-columns:repeat(3,1fr);">
-            <div class="card"><div class="label">PPN Keluaran Berjalan</div><div class="value">${fmtRp(sK)}</div></div>
-            <div class="card"><div class="label">PPN Masukan Berjalan</div><div class="value">${fmtRp(sM)}</div></div>
-            <div class="card"><div class="label">Estimasi Kurang/(Lebih) Bayar</div><div class="value">${fmtRp(sK-sM)}</div></div>
-          </div>
-          <div class="hint" style="margin-top:12px;">Aplikasi ini <strong>tidak</strong> terhubung ke sistem e-Faktur/Coretax resmi DJP (memerlukan sertifikat elektronik dan akses API resmi pemerintah). Gunakan angka di atas sebagai referensi saat menginput faktur pajak secara manual.</div>`;
-        })()}
-      </div>
-    </div>
-  `);
-  calcPph21(); calcPph23();
-}
-function renderPajakOmzet(mk){
-  const r = monthRangeISO(mk);
-  const omzet = DB.coa.filter(a=>a.category==='Pendapatan').reduce((s,a)=>s+accountFlowInRange(a,r.start,r.end),0);
-  document.getElementById('tx_omzet').value = omzet.toFixed(0);
-  document.getElementById('tx_pphfinal').textContent = fmtRp(omzet*0.005);
-}
-function renderPajakOmzetManual(v){
-  document.getElementById('tx_pphfinal').textContent = fmtRp(parseNum(v)*0.005);
-}
-function calcPph21(){
-  const gajiBulan = parseNum(document.getElementById('p21_gaji').value);
-  const ptkp = parseNum(document.getElementById('p21_ptkp').value);
-  const setahun = pph21Simple(gajiBulan*12, ptkp);
-  document.getElementById('p21_tahun').textContent = fmtRp(setahun);
-  document.getElementById('p21_bulan').textContent = fmtRp(setahun/12);
-}
-function calcPph23(){
-  const jasa = parseNum(document.getElementById('p23_jasa').value);
-  document.getElementById('p23_hasil').textContent = fmtRp(jasa*0.02);
-}
-
 /* ================= PENCARIAN GLOBAL ================= */
 function searchResultRow(icon, title, subtitle, onclickJs){
   return `<div class="search-row" onclick="${onclickJs}" style="padding:9px 14px; cursor:pointer; border-bottom:1px solid var(--line-soft); display:flex; gap:10px; align-items:center;"
@@ -4879,6 +4813,7 @@ function authErrMsg(j, status){
   if (low.includes('at least') && low.includes('character')) return 'Password minimal 6 karakter.';
   if (low.includes('valid email') || low.includes('invalid email')) return 'Format email tidak valid.';
   if (low.includes('rate limit') || status === 429) return 'Terlalu banyak percobaan. Tunggu beberapa saat lalu coba lagi.';
+  if (low.includes('invalid totp') || low.includes('mfa verification failed')) return 'Kode salah atau sudah kedaluwarsa. Coba lagi dengan kode terbaru dari aplikasi.';
   if (low.includes('same password')) return 'Password baru harus berbeda dari yang lama.';
   return m || ('Terjadi kesalahan (HTTP ' + status + ').');
 }
@@ -4975,6 +4910,14 @@ function renderAuth(view, msg, kind){
       <div class="auth-sub">Pendaftaran kamu sudah diterima dan sedang menunggu persetujuan pemilik. Kamu akan bisa masuk setelah disetujui.</div>${m}
       <button class="btn btn-primary" onclick="authCheckStatus()">Cek Status Lagi</button>
       <button class="btn btn-outline" style="margin-top:10px;" onclick="authLogout()">Keluar</button>`);
+  } else if (view === 'mfa'){
+    html = authShell(`<div class="auth-status-ico" style="text-align:center">&#128274;</div><h2>Verifikasi 2 Langkah</h2>
+      <div class="auth-sub">Masukkan kode 6 digit dari aplikasi autentikator Anda (Google Authenticator, Authy, dll.).</div>${m}
+      <form onsubmit="authSubmitMfa(event)">
+        <div class="field"><label>Kode verifikasi</label><input id="au_code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>
+        <button class="btn btn-primary" type="submit" id="au_btn">Verifikasi</button>
+      </form>
+      <div class="auth-links"><a onclick="authLogout()">&larr; Keluar</a></div>`);
   } else if (view === 'rejected'){
     html = authShell(`<div class="auth-status-ico">&#128683;</div><h2>Pendaftaran Ditolak</h2>
       <div class="auth-sub">Maaf, pendaftaran akun kamu ditolak oleh pemilik. Hubungi pemilik aplikasi untuk informasi lebih lanjut.</div>${m}
@@ -5058,10 +5001,13 @@ async function authSubmitReset(ev){
 function authResetCancel(){ authRecoveryToken = null; renderAuth('login'); }
 async function authAfterLogin(){
   renderAuth('loading', 'Memeriksa akun…');
+  try { await authRefreshUser(); } catch(e){}
+  if (authTotpFactor() && authJwtAal(authSession.access_token) !== 'aal2'){ renderAuth('mfa'); return; }
   try {
     const md = (authSession && authSession.user && authSession.user.user_metadata) || {};
     const prof = await authRest('rpc/akt_ensure_profile', 'POST', {p_name: md.name || '', p_requested_role: md.requested_role || 'karyawan'});
     authProfile = Array.isArray(prof) ? prof[0] : prof;
+    authNotifyRegistration(authProfile);
   } catch(e){
     authSession = null; authProfile = null; authSaveSession();
     renderAuth('login', 'Gagal memuat profil akun: ' + e.message, 'err');
@@ -5087,23 +5033,26 @@ async function authLogout(everywhere){
   if (everywhere && !confirm('Keluar dari SEMUA device? Anda juga akan keluar dari perangkat ini dan harus masuk lagi.')) return;
   await authFlush();
   try { if (authSession) await authCall('/logout?scope=' + (everywhere ? 'global' : 'local'), 'POST', null, authSession.access_token); } catch(e){}
-  authSession = null; authProfile = null; authCompany = null; authPendingCount = 0; authSaveSession();
+  authSession = null; authProfile = null; authCompany = null; authPendingCount = 0; authPendingSeen = null; authSaveSession();
   if (authPollTimer){ clearInterval(authPollTimer); authPollTimer = null; }
   renderAuth('login');
 }
 
 /* ---------- Pilih Perusahaan ---------- */
 function blankCompanyData(name){
+  DB.lockedUntil = '';   // harus direset SEBELUM seed, karena seed mencatat jurnal contoh bertanggal 2026-01
   seedSampleData();   // hanya untuk mendapatkan bagan akun baku; semua transaksi contoh dibuang di bawah
   DB.coa.forEach(a => { a.initial = 0; });
   DB.journal = []; DB.fixedAssets = []; DB.inventoryItems = []; DB.stockMoves = []; DB.invoices = [];
-  DB.budgets = {}; DB.bankRecon = []; DB.auditLog = []; DB.closedYears = [];
+  DB.budgets = {}; DB.bankRecon = []; DB.auditLog = []; DB.closedYears = []; DB.lockedUntil = '';
   DB.counters = {journal:0, invoice:0};
   // reset SEMUA kunci data lain agar tidak ada yang terbawa dari perusahaan yang dibuka sebelumnya
   DB.branches = []; DB.activeYear = 2026;
   DB.users = [{id:'owner', name:'Pemilik Usaha', role:'owner'}, {id:'admin', name:'Admin', role:'admin'}, {id:'staff', name:'Staff', role:'staff'}, {id:'user', name:'User', role:'user'}];
   DB.activeUser = 'admin';
   DB.company = {name: name, address:'', city:'', province:'', npwp:'', email:'', fiscalStart:'2026-01-01'};
+  DB.taxSettings = {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false};
+  DB.onboarding = {dismissed:false, team:false};   // perusahaan baru: tampilkan panduan awal
   supaVersion = null;
 }
 let authCompanies = [];
@@ -5130,6 +5079,9 @@ async function authChooseCompany(id){
       const data = rows[0].data;
       if (!Array.isArray(data.coa) || !Array.isArray(data.journal)) throw new Error('Struktur data perusahaan tidak dikenali.');
       BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = data[k]; });
+    if (data.lockedUntil === undefined) DB.lockedUntil = '';
+    if (data.onboarding === undefined) DB.onboarding = {dismissed:true, team:false};
+    if (data.taxSettings === undefined) DB.taxSettings = {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false};
       supaVersion = rows[0].updated_at;
       needPush = false;
     }
@@ -5169,10 +5121,13 @@ async function authSwitchCompany(){
 
 /* ---------- Kelola Pengguna (khusus pemilik sistem) ---------- */
 let authPendingCount = 0;
+let authPendingSeen = null;   // jumlah pendaftar menunggu pada pengecekan sebelumnya (null = belum pernah dicek)
 let authPollTimer = null;
 function authPendingBannerHtml(){
   if (!isSysOwner() || !authPendingCount) return '';
-  return `<div class="balance-check bad" style="margin-bottom:12px;">&#128276; ${authPendingCount} pendaftar baru menunggu persetujuan Anda &mdash; <a href="#" onclick="authOpenManage(); return false;" style="color:inherit; font-weight:700; text-decoration:underline;">Kelola Pengguna</a></div>`;
+  const canAsk = typeof Notification !== 'undefined' && Notification.permission === 'default';
+  return `<div class="balance-check bad" style="margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">&#128276; ${authPendingCount} pendaftar baru menunggu persetujuan Anda &mdash; <a href="#" onclick="authOpenManage(); return false;" style="color:inherit; font-weight:700; text-decoration:underline;">Kelola Pengguna</a>
+    ${canAsk ? '<a href="#" onclick="authAskNotify(); return false;" style="margin-left:auto; color:inherit; opacity:.85; text-decoration:underline;">Aktifkan notifikasi browser</a>' : ''}</div>`;
 }
 async function authPollPending(){
   if (!isSysOwner() || !authSession) return;
@@ -5180,14 +5135,55 @@ async function authPollPending(){
     const rows = await authRest('akt_profiles?status=eq.pending&select=id');
     const n = (rows||[]).length;
     const changed = n !== authPendingCount;
-    authPendingCount = n;
+    const prev = authPendingSeen;
+    authPendingSeen = n;
+    authPendingCount = n; authUpdateTitle();
+    if (prev !== null && n > prev) authAlertNewRegistrants(n - prev);
     if (changed && authCompany && currentTab === 'dashboard') renderCurrent();
     if (changed){ const lk = document.getElementById('au_manage_link'); if (lk) lk.textContent = 'Kelola Pengguna' + (n ? ' (' + n + ' menunggu)' : ''); }
   } catch(e){}
 }
 function authStartPolling(){
   if (authPollTimer) clearInterval(authPollTimer);
-  authPollTimer = setInterval(authPollPending, 60000);
+  authPollTimer = setInterval(authPollPending, 30000);
+}
+/* ---- notifikasi pendaftar baru ---- */
+// Email ke pemilik sistem: dikirim oleh Edge Function "notify-registration" (aktif setelah RESEND_API_KEY diatur di Supabase).
+// Dipanggil sekali saat pendaftar berstatus pending masuk; fungsi di server memastikan email hanya terkirim sekali per pendaftar.
+function authNotifyRegistration(prof){
+  try {
+    if (!prof || prof.status !== 'pending' || prof.notified_at || !authSession) return;
+    fetch(supaConfig.url.replace(/\/+$/,'') + '/functions/v1/notify-registration', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'apikey': supaConfig.key, 'Authorization': 'Bearer ' + authSession.access_token},
+      body: '{}'
+    }).catch(function(){});
+  } catch(e){}
+}
+function authToast(msg){
+  let t = document.getElementById('akToast');
+  if (!t){
+    t = document.createElement('div'); t.id = 'akToast'; t.setAttribute('role', 'status');
+    t.style.cssText = 'position:fixed; right:18px; bottom:18px; z-index:2000; max-width:340px; background:#14213D; color:#fff; padding:12px 16px; border-radius:10px; box-shadow:0 8px 24px rgba(20,33,61,.3); font-size:13.5px; line-height:1.5; cursor:pointer;';
+    t.onclick = function(){ t.style.display = 'none'; authOpenManage(); };
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(function(){ t.style.display = 'none'; }, 12000);
+}
+function authAlertNewRegistrants(add){
+  const msg = add === 1 ? 'Ada 1 pendaftar baru menunggu persetujuan. Klik untuk membuka Kelola Pengguna.' : 'Ada ' + add + ' pendaftar baru menunggu persetujuan. Klik untuk membuka Kelola Pengguna.';
+  authToast(msg);
+  try {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && document.hidden){
+      const n = new Notification('Pendaftar baru', {body: msg, tag: 'akt-pendaftar'});
+      n.onclick = function(){ window.focus(); authOpenManage(); n.close(); };
+    }
+  } catch(e){}
+}
+function authAskNotify(){
+  if (typeof Notification === 'undefined') return;
+  Notification.requestPermission().then(function(){ if (currentTab === 'dashboard') renderCurrent(); });
 }
 async function authOpenManage(){
   if (!isSysOwner()) return;
@@ -5197,7 +5193,7 @@ async function authOpenManage(){
   try {
     const users = await authRest('akt_profiles?select=*&order=created_at.asc');
     authMgmt = {users: users||[], comps: [], mems: []};
-    authPendingCount = authMgmt.users.filter(u=>u.status==='pending').length;
+    authPendingCount = authMgmt.users.filter(u=>u.status==='pending').length; authUpdateTitle();
   } catch(e){ authShowCompanies('Gagal memuat pengguna: ' + e.message, 'err'); return; }
   renderAuth('manage');
 }
@@ -5288,8 +5284,1232 @@ async function authRemoveMember(uid){
 }
 
 
+
+/* ================= KUNCI PERIODE ================= */
+function isPeriodLocked(dateStr){ return !!(DB.lockedUntil && dateStr && String(dateStr).slice(0,7) <= DB.lockedUntil); }
+function periodLockMsg(dateStr){
+  return 'Periode ' + monthLabel(String(dateStr).slice(0,7)) + ' sudah dikunci (semua transaksi sampai akhir ' + monthLabel(DB.lockedUntil) +
+    '). Transaksi pada periode ini tidak bisa ditambah, diubah, atau dihapus. Owner dapat membuka kunci di menu Pengaturan Sistem.';
+}
+function guardPeriod(dateStr){
+  if (isPeriodLocked(dateStr)){ alert(periodLockMsg(dateStr)); return false; }
+  return true;
+}
+function periodLockBanner(){
+  if (!DB.lockedUntil) return '';
+  return '<div class="balance-check ok" style="margin-bottom:14px;">&#128274; Periode dikunci sampai akhir <strong>' + esc(monthLabel(DB.lockedUntil)) +
+    '</strong>. Transaksi bertanggal pada periode itu tidak bisa ditambah, diubah, atau dihapus.</div>';
+}
+function periodLockHtml(){
+  const cur = DB.lockedUntil;
+  const d = new Date(); d.setMonth(d.getMonth()-1);
+  const suggest = cur || (d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
+  return `<div class="section">
+    <div class="section-head"><div><h2>Kunci Periode</h2><div class="hint">Setelah sebuah bulan selesai diperiksa dan laporannya final, kunci agar tidak ada yang bisa menambah, mengubah, atau menghapus transaksi di dalamnya</div></div></div>
+    <div class="section-body">
+      <div style="margin-bottom:14px;">${cur
+        ? '<span class="pill pill-warn">Terkunci sampai akhir ' + esc(monthLabel(cur)) + '</span>'
+        : '<span class="pill pill-ok">Belum ada periode yang dikunci</span>'}</div>
+      <div class="filters">
+        <div class="field"><label>Kunci sampai akhir bulan</label><input type="month" id="pl_month" value="${esc(suggest)}"></div>
+        <button class="btn btn-primary" onclick="savePeriodLock()">Kunci Periode</button>
+        ${cur ? '<button class="btn btn-outline" onclick="clearPeriodLock()">Buka Semua Kunci</button>' : ''}
+      </div>
+      <div class="hint" style="margin-top:12px;">Berlaku untuk semua pengguna, termasuk Owner, sampai kunci dibuka di sini. Jurnal penyusutan otomatis untuk bulan yang terkunci juga tidak akan diposting.</div>
+    </div>
+  </div>`;
+}
+function savePeriodLock(){
+  if (!isOwner()){ alert('Hanya Owner yang dapat mengatur kunci periode.'); return; }
+  const v = (document.getElementById('pl_month')||{}).value;
+  if (!/^\d{4}-\d{2}$/.test(v||'')){ alert('Pilih bulan terakhir yang akan dikunci.'); return; }
+  if (!confirm('Kunci semua transaksi sampai akhir ' + monthLabel(v) + '?\n\nSetelah dikunci tidak ada yang bisa menambah, mengubah, atau menghapus transaksi pada periode itu sampai Owner membuka kunci.')) return;
+  snapshotForUndo('Kunci Periode');
+  const before = DB.lockedUntil;
+  DB.lockedUntil = v;
+  logAudit('Kunci Periode', monthLabel(v), before ? 'Sebelumnya terkunci sampai ' + monthLabel(before) : 'Kunci baru');
+  renderCurrent();
+}
+function clearPeriodLock(){
+  if (!isOwner()){ alert('Hanya Owner yang dapat membuka kunci periode.'); return; }
+  if (!DB.lockedUntil) return;
+  if (!confirm('Buka semua kunci periode? Transaksi pada bulan yang tadinya terkunci bisa diubah lagi.')) return;
+  snapshotForUndo('Buka Kunci Periode');
+  const before = DB.lockedUntil;
+  DB.lockedUntil = '';
+  logAudit('Buka Kunci Periode', monthLabel(before), 'Semua kunci dibuka');
+  renderCurrent();
+}
+
+/* ================= LOG AKTIVITAS ================= */
+let auditF = {q:'', actor:'', action:'', from:'', to:'', limit:50};
+function tsLocal(ts){
+  const d = new Date(ts);
+  if (isNaN(d)) return {date:String(ts).slice(0,10), time:String(ts).slice(11,16)};
+  const p = n => String(n).padStart(2,'0');
+  return {date: d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()), time: p(d.getHours())+':'+p(d.getMinutes())};
+}
+function auditFiltered(){
+  const q = auditF.q.trim().toLowerCase();
+  return DB.auditLog.slice().reverse().filter(l => {
+    if (auditF.actor && l.actor !== auditF.actor) return false;
+    if (auditF.action && l.action !== auditF.action) return false;
+    const t = tsLocal(l.ts);
+    if (auditF.from && t.date < auditF.from) return false;
+    if (auditF.to && t.date > auditF.to) return false;
+    if (q && !((l.actor||'')+' '+(l.action||'')+' '+(l.target||'')+' '+(l.detail||'')).toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function auditTableHtml(){
+  const all = auditFiltered();
+  const rows = all.slice(0, auditF.limit);
+  const body = rows.length ? rows.map(l => {
+    const t = tsLocal(l.ts);
+    return `<tr>
+      <td class="tag-small">${fmtDate(t.date)} ${t.time}</td>
+      <td>${esc(l.actor)}</td>
+      <td><span class="pill pill-aset">${esc(l.action)}</span></td>
+      <td>${esc(l.target)}</td>
+      <td class="muted">${esc(l.detail)}</td>
+    </tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="5">${DB.auditLog.length ? 'Tidak ada aktivitas yang cocok dengan filter.' : 'Belum ada aktivitas tercatat.'}</td></tr>`;
+  const more = all.length > rows.length
+    ? `<div style="padding:12px 0 0; text-align:center;"><button class="btn btn-outline btn-sm" onclick="auditMore()">Tampilkan lebih banyak (${all.length - rows.length} lagi)</button></div>` : '';
+  return `<div class="hint" style="margin-bottom:8px;">${all.length} aktivitas${all.length!==DB.auditLog.length ? ' (dari '+DB.auditLog.length+' total)' : ''}</div>
+    <div class="scrollx"><table>
+      <thead><tr><th>Waktu</th><th>Pengguna</th><th>Aksi</th><th>Objek</th><th>Detail</th></tr></thead>
+      <tbody>${body}</tbody></table></div>${more}`;
+}
+function auditSet(k, v){ auditF[k] = v; auditF.limit = 50; const el = document.getElementById('auditTbl'); if (el) el.innerHTML = auditTableHtml(); }
+function auditMore(){ auditF.limit += 100; const el = document.getElementById('auditTbl'); if (el) el.innerHTML = auditTableHtml(); }
+function auditReset(){ auditF = {q:'', actor:'', action:'', from:'', to:'', limit:50}; renderAuditLog(); }
+function auditExportRows(){
+  const rows = [['Waktu','Pengguna','Aksi','Objek','Detail']];
+  auditFiltered().forEach(l => { const t = tsLocal(l.ts); rows.push([t.date + ' ' + t.time, l.actor, l.action, l.target, l.detail]); });
+  return rows;
+}
+function exportAuditCSV(){ downloadCSV('log-aktivitas.csv', auditExportRows()); }
+async function exportAuditXLSX(){
+  try { await downloadXLSX('log-aktivitas.xlsx', [{name:'Log Aktivitas', rows: auditExportRows(), widths:[18,22,18,34,60], plainCols:[0,1,2,3,4]}]); }
+  catch(e){ alert(e.message); }
+}
+function renderAuditLog(){
+  const actors = Array.from(new Set(DB.auditLog.map(l=>l.actor).filter(Boolean))).sort();
+  const actions = Array.from(new Set(DB.auditLog.map(l=>l.action).filter(Boolean))).sort();
+  const opt = (arr, sel) => '<option value="">Semua</option>' + arr.map(x=>`<option value="${esc(x)}" ${x===sel?'selected':''}>${esc(x)}</option>`).join('');
+  setContent(`
+    <div class="section">
+      <div class="section-head">
+        <div><h2>Log Aktivitas</h2><div class="hint">Siapa mengubah apa dan kapan. Tersimpan bersama data perusahaan di cloud (2.000 aktivitas terbaru).</div></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-outline btn-sm" onclick="exportAuditXLSX()">Unduh Excel</button>
+          <button class="btn btn-outline btn-sm" onclick="exportAuditCSV()">Unduh CSV</button>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="filters" style="margin-bottom:14px;">
+          <div class="field"><label>Cari</label><input id="au_q" placeholder="Objek, detail, nama…" value="${esc(auditF.q)}" oninput="auditSet('q',this.value)"></div>
+          <div class="field"><label>Pengguna</label><select onchange="auditSet('actor',this.value)">${opt(actors, auditF.actor)}</select></div>
+          <div class="field"><label>Aksi</label><select onchange="auditSet('action',this.value)">${opt(actions, auditF.action)}</select></div>
+          <div class="field"><label>Dari tanggal</label><input type="date" value="${esc(auditF.from)}" onchange="auditSet('from',this.value)"></div>
+          <div class="field"><label>Sampai tanggal</label><input type="date" value="${esc(auditF.to)}" onchange="auditSet('to',this.value)"></div>
+          <button class="btn btn-outline btn-sm" onclick="auditReset()">Reset</button>
+        </div>
+        <div id="auditTbl">${auditTableHtml()}</div>
+      </div>
+    </div>
+  `);
+}
+
+/* ================= EXCEL (IMPOR / EKSPOR) ================= */
+let _xlsxP = null;
+function loadXLSX(){
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (_xlsxP) return _xlsxP;
+  _xlsxP = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload = () => window.XLSX ? res(window.XLSX) : (_xlsxP = null, rej(new Error('Pustaka Excel gagal dimuat.')));
+    s.onerror = () => { _xlsxP = null; rej(new Error('Pustaka Excel gagal dimuat. Periksa koneksi internet lalu coba lagi.')); };
+    document.head.appendChild(s);
+  });
+  return _xlsxP;
+}
+function xlDateCell(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+  if (!m) return iso || '';
+  return {t:'n', v: Math.round(Date.UTC(+m[1], +m[2]-1, +m[3]) / 86400000) + 25569, z:'dd/mm/yyyy'};
+}
+function sheetFromRows(XL, rows, o){
+  o = o || {};
+  const ws = XL.utils.aoa_to_sheet(rows);
+  ws['!cols'] = (o.widths || []).map(w => ({wch:w}));
+  const ref = XL.utils.decode_range(ws['!ref'] || 'A1');
+  for (let R = ref.s.r; R <= ref.e.r; R++){
+    for (let C = ref.s.c; C <= ref.e.c; C++){
+      const c = ws[XL.utils.encode_cell({r:R, c:C})];
+      if (c && c.t === 'n' && !c.z && !(o.plainCols || []).includes(C)) c.z = '#,##0';
+    }
+  }
+  return ws;
+}
+function sheetsToWorkbook(XL, sheets){
+  const wb = XL.utils.book_new();
+  sheets.forEach(s => XL.utils.book_append_sheet(wb, sheetFromRows(XL, s.rows, s), s.name.slice(0,31)));
+  return wb;
+}
+async function downloadXLSX(filename, sheets){
+  const XL = await loadXLSX();
+  XL.writeFile(sheetsToWorkbook(XL, sheets), filename);
+}
+function xlAccountRows(){
+  const rows = [['Kode','Nama Akun','Kategori','Saldo Awal','Kontra (Ya/Tidak)','Akun Kas (Ya/Tidak)']];
+  DB.coa.slice().sort((a,b)=>a.code.localeCompare(b.code, undefined, {numeric:true}))
+    .forEach(a => rows.push([String(a.code), a.name, a.category, a.initial||0, a.contra?'Ya':'Tidak', a.isCash?'Ya':'Tidak']));
+  return rows;
+}
+function xlJournalRows(from, to){
+  const rows = [['No Jurnal','Tanggal','Referensi','Keterangan','Jenis','Kode Akun','Nama Akun','Debit','Kredit']];
+  activeJournal().filter(j => (!from || j.date >= from) && (!to || j.date <= to))
+    .sort((a,b)=> (a.date+String(a.no).padStart(6,'0')).localeCompare(b.date+String(b.no).padStart(6,'0')))
+    .forEach(j => j.lines.forEach(l => {
+      const acc = coaByCode(l.account);
+      rows.push(['JU-'+String(j.no).padStart(3,'0'), xlDateCell(j.date), j.ref||'', j.desc, SOURCE_LABELS[j.source]||j.source,
+        String(l.account), acc?acc.name:'', l.debit||'', l.kredit||'']);
+    }));
+  return rows;
+}
+function xlTrialBalanceRows(asOf){
+  const rows = [['Neraca Saldo per', xlDateCell(asOf)], [], ['Kode','Nama Akun','Kategori','Debit','Kredit']];
+  let td = 0, tk = 0;
+  DB.coa.slice().sort((a,b)=>a.code.localeCompare(b.code, undefined, {numeric:true})).forEach(a => {
+    const bal = accountBalanceAsOf(a, asOf);
+    if (!bal) return;
+    const side = normalSide(a);
+    const onDebit = (side === 'D') === (bal >= 0);
+    const v = Math.abs(bal);
+    if (onDebit) td += v; else tk += v;
+    rows.push([String(a.code), a.name, a.category, onDebit ? v : '', onDebit ? '' : v]);
+  });
+  rows.push(['', 'TOTAL', '', td, tk]);
+  return rows;
+}
+function xlLabaRugiRows(){
+  const lr = calcLabaRugi();
+  const rows = [['Laporan Laba Rugi', DB.company.name || ''], ['Periode', fmtDate(fiscalYearBounds().start) + ' s.d. ' + fmtDate(reportAsOfDate())], [], ['Keterangan','Nilai'], ['PENDAPATAN','']];
+  lr.pendapatan.forEach(a => rows.push([a.name, a.balance]));
+  rows.push(['Total Pendapatan', lr.totalPendapatan], ['BEBAN','']);
+  lr.beban.forEach(a => rows.push([a.name, a.balance]));
+  rows.push(['Total Beban', lr.totalBeban], ['LABA (RUGI) BERSIH', lr.labaBersih]);
+  return rows;
+}
+function xlNeracaRows(){
+  const nr = calcNeraca();
+  const rows = [['Neraca', DB.company.name || ''], ['Per tanggal', fmtDate(reportAsOfDate())], [], ['Keterangan','Nilai'], ['ASET','']];
+  nr.aset.forEach(a => rows.push([a.name, a.balance]));
+  rows.push(['Total Aset', nr.totalAset], ['KEWAJIBAN','']);
+  nr.kewajiban.forEach(a => rows.push([a.name, a.balance]));
+  rows.push(['Total Kewajiban', nr.totalKewajiban], ['MODAL','']);
+  nr.modal.forEach(a => rows.push([a.name, a.balance]));
+  rows.push(['Laba (Rugi) Berjalan', nr.labaBersih], ['Total Modal', nr.totalModal], ['TOTAL KEWAJIBAN + MODAL', nr.totalKewajiban + nr.totalModal]);
+  return rows;
+}
+function buildExportSheets(which, opt){
+  opt = opt || {};
+  const to = opt.to || todayISO();
+  const S = {
+    coa: {name:'Kode Akun', rows: xlAccountRows(), widths:[12,38,14,16,16,18], plainCols:[0]},
+    jurnal: {name:'Jurnal Umum', rows: xlJournalRows(opt.from, opt.to), widths:[12,12,14,40,12,12,32,16,16], plainCols:[0,2,5]},
+    saldo: {name:'Neraca Saldo', rows: xlTrialBalanceRows(to), widths:[12,38,14,16,16], plainCols:[0]},
+    labarugi: {name:'Laba Rugi', rows: xlLabaRugiRows(), widths:[40,18]},
+    neraca: {name:'Neraca', rows: xlNeracaRows(), widths:[40,18]}
+  };
+  return which === 'all' ? [S.coa, S.jurnal, S.saldo, S.labarugi, S.neraca] : [S[which]];
+}
+const EXPORT_NAMES = {all:'laporan-lengkap', coa:'kode-akun', jurnal:'jurnal-umum', saldo:'neraca-saldo', labarugi:'laba-rugi', neraca:'neraca'};
+async function exportExcel(which){
+  const from = (document.getElementById('ex_from')||{}).value || '';
+  const to = (document.getElementById('ex_to')||{}).value || todayISO();
+  const btns = document.querySelectorAll('.ex-btn'); btns.forEach(b => b.disabled = true);
+  try {
+    await downloadXLSX(EXPORT_NAMES[which] + '-' + todayISO() + '.xlsx', buildExportSheets(which, {from, to}));
+    logAuditSilent('Ekspor', 'Excel: ' + EXPORT_NAMES[which], from ? from + ' s.d. ' + to : 'per ' + to);
+  } catch(e){ alert(e.message); }
+  btns.forEach(b => b.disabled = false);
+}
+async function downloadImportTemplate(){
+  const rowsA = [['Kode','Nama Akun','Kategori','Saldo Awal','Kontra (Ya/Tidak)','Akun Kas (Ya/Tidak)'],
+    ['1101','Kas Kecil','Aset',5000000,'Tidak','Ya'],
+    ['1102','Bank BCA','Aset',25000000,'Tidak','Ya'],
+    ['4101','Penjualan Jasa','Pendapatan',0,'Tidak','Tidak'],
+    ['5101','Beban Sewa','Beban',0,'Tidak','Tidak']];
+  const rowsJ = [['No','Tanggal','Referensi','Keterangan','Kode Akun','Debit','Kredit'],
+    [1, '2026-01-10', 'BKM-001', 'Penjualan jasa tunai', '1101', 1500000, ''],
+    [1, '2026-01-10', 'BKM-001', 'Penjualan jasa tunai', '4101', '', 1500000],
+    [2, '2026-01-15', 'BKK-001', 'Bayar sewa toko', '5101', 2000000, ''],
+    [2, '2026-01-15', 'BKK-001', 'Bayar sewa toko', '1102', '', 2000000]];
+  const rowsP = [['Petunjuk impor'],
+    ['1. Isi sheet "Kode Akun" untuk menambah/memperbarui akun beserta saldo awalnya. Kategori: Aset, Kewajiban, Modal, Pendapatan, atau Beban.'],
+    ['2. Isi sheet "Jurnal" untuk transaksi. Satu jurnal = beberapa baris dengan nomor "No" yang sama. Total Debit harus sama dengan total Kredit.'],
+    ['3. Tanggal boleh berformat 2026-01-31 atau 31/01/2026. Kode akun di Jurnal harus sudah ada di sistem atau ada di sheet "Kode Akun".'],
+    ['4. Anda boleh mengisi salah satu sheet saja. Hapus baris contoh sebelum mengisi data Anda.'],
+    ['5. Sebelum data masuk, Anda akan melihat pratinjau dan daftar baris yang bermasalah. Impor bisa diurungkan lewat tombol Undo.']];
+  try {
+    await downloadXLSX('template-impor-akuntansi.xlsx', [
+      {name:'Petunjuk', rows: rowsP, widths:[120], plainCols:[0]},
+      {name:'Kode Akun', rows: rowsA, widths:[12,32,14,16,18,18], plainCols:[0]},
+      {name:'Jurnal', rows: rowsJ, widths:[8,12,14,36,12,16,16], plainCols:[0,1,2,4]}
+    ]);
+  } catch(e){ alert(e.message); }
+}
+
+/* ---- parsing ---- */
+function xlNorm(s){ return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9]/g,''); }
+const XL_HEAD = {
+  kode:['kode','kodeakun','code','noakun','akun'], nama:['nama','namaakun','name'], kategori:['kategori','category','tipe','jenis'],
+  saldo:['saldoawal','saldo','openingbalance'], kontra:['kontra','kontraya/tidak','kontrayatidak'], kas:['akunkas','kas','akunkasyatidak'],
+  no:['no','nojurnal','nomor','nomorjurnal','nobukti'], tgl:['tanggal','tgl','date'], ref:['referensi','ref','noreferensi'],
+  ket:['keterangan','uraian','deskripsi','description'], debit:['debit','debet'], kredit:['kredit','credit']
+};
+function xlHeaderMap(row){
+  const map = {};
+  row.forEach((h, i) => {
+    const n = xlNorm(h); if (!n) return;
+    for (const k in XL_HEAD){ if (map[k] === undefined && XL_HEAD[k].map(xlNorm).includes(n)) { map[k] = i; break; } }
+  });
+  return map;
+}
+function xlDateParse(v){
+  if (v === '' || v == null) return '';
+  if (typeof v === 'number'){
+    if (v < 20000 || v > 80000) return '';
+    return new Date(Math.round((v - 25569) * 86400000)).toISOString().slice(0,10);
+  }
+  const s = String(v).trim();
+  let y, m, d, x;
+  if ((x = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s))){ y = +x[1]; m = +x[2]; d = +x[3]; }
+  else if ((x = /^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s))){ d = +x[1]; m = +x[2]; y = +x[3]; }
+  else return '';
+  const dt = new Date(Date.UTC(y, m-1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m-1 || dt.getUTCDate() !== d) return '';
+  return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+}
+function xlNum(v){
+  if (typeof v === 'number') return v;
+  let s = String(v==null?'':v).trim().replace(/rp/ig,'').replace(/\s/g,'');
+  if (!s) return 0;
+  const neg = /^\(.*\)$/.test(s) || s.startsWith('-');
+  s = s.replace(/[()\-]/g,'');
+  if (s.includes('.') && s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,'');
+  else if (s.includes(',')) s = s.replace(',','.');
+  const n = parseFloat(s);
+  return isNaN(n) ? NaN : (neg ? -n : n);
+}
+function xlTruthy(v){ return ['ya','y','yes','true','1','x'].includes(String(v==null?'':v).trim().toLowerCase()); }
+function xlSheetRows(XL, ws){ return XL.utils.sheet_to_json(ws, {header:1, raw:true, defval:''}); }
+function xlFindHeader(rows, need){
+  for (let i = 0; i < Math.min(rows.length, 12); i++){
+    const m = xlHeaderMap(rows[i]);
+    if (need.every(k => m[k] !== undefined)) return {idx:i, map:m};
+  }
+  return null;
+}
+function buildImportPlan(XL, wb){
+  const plan = {coa:{add:[], upd:[]}, jurnal:{ok:[], bad:[], dup:[]}, problems:[], sheets:[]};
+  const validCats = ['Aset','Kewajiban','Modal','Pendapatan','Beban'];
+  const incoming = new Map();
+  let coaRows = null, jrnRows = null;
+  wb.SheetNames.forEach(name => {
+    const rows = xlSheetRows(XL, wb.Sheets[name]);
+    const hj = xlFindHeader(rows, ['tgl','debit','kredit']);
+    const hc = xlFindHeader(rows, ['kode','nama','kategori']);
+    if (hj && !jrnRows){ jrnRows = {name, rows, h:hj}; }
+    else if (hc && !hj && !coaRows){ coaRows = {name, rows, h:hc}; }
+  });
+  if (coaRows){
+    plan.sheets.push(coaRows.name);
+    const {map} = coaRows.h;
+    coaRows.rows.slice(coaRows.h.idx + 1).forEach((r, i) => {
+      const line = coaRows.h.idx + 2 + i;
+      const code = String(r[map.kode]==null?'':r[map.kode]).trim();
+      const name = String(r[map.nama]==null?'':r[map.nama]).trim();
+      if (!code && !name) return;
+      const catRaw = String(r[map.kategori]==null?'':r[map.kategori]).trim();
+      const cat = validCats.find(c => c.toLowerCase() === catRaw.toLowerCase());
+      if (!code || !name || !cat){ plan.problems.push('Kode Akun baris ' + line + ': kode/nama kosong atau kategori "' + catRaw + '" tidak dikenali'); return; }
+      const rec = {code, name, category: cat};
+      if (map.saldo !== undefined){ const n = xlNum(r[map.saldo]); if (isNaN(n)){ plan.problems.push('Kode Akun baris ' + line + ': saldo awal bukan angka'); return; } rec.initial = n; }
+      if (map.kontra !== undefined) rec.contra = xlTruthy(r[map.kontra]);
+      if (map.kas !== undefined) rec.isCash = xlTruthy(r[map.kas]);
+      if (incoming.has(code)) plan.problems.push('Kode Akun baris ' + line + ': kode ' + code + ' muncul lebih dari sekali, baris terakhir dipakai');
+      incoming.set(code, rec);
+    });
+    incoming.forEach(rec => (coaByCode(rec.code) ? plan.coa.upd : plan.coa.add).push(rec));
+  }
+  if (jrnRows){
+    plan.sheets.push(jrnRows.name);
+    const {map} = jrnRows.h;
+    const groups = new Map();
+    jrnRows.rows.slice(jrnRows.h.idx + 1).forEach((r, i) => {
+      const line = jrnRows.h.idx + 2 + i;
+      const code = String(r[map.kode]==null?'':r[map.kode]).trim();
+      const dRaw = r[map.debit], kRaw = r[map.kredit];
+      const tglRaw = r[map.tgl];
+      if (!code && dRaw === '' && kRaw === '' && tglRaw === '') return;
+      const no = map.no !== undefined ? String(r[map.no]==null?'':r[map.no]).trim() : '';
+      const ref = map.ref !== undefined ? String(r[map.ref]==null?'':r[map.ref]).trim() : '';
+      const ket = map.ket !== undefined ? String(r[map.ket]==null?'':r[map.ket]).trim() : '';
+      const date = xlDateParse(tglRaw);
+      const key = no ? 'N:' + no : 'R:' + (date || tglRaw) + '|' + ref + '|' + ket;
+      if (!groups.has(key)) groups.set(key, {key, label: no ? 'No ' + no : (ref || ket || 'baris ' + line), line, date, ref, desc: ket, lines:[], errs:[]});
+      const g = groups.get(key);
+      if (!g.date && date) g.date = date;
+      if (!g.ref && ref) g.ref = ref;
+      if (!g.desc && ket) g.desc = ket;
+      const debit = xlNum(dRaw === '' ? 0 : dRaw), kredit = xlNum(kRaw === '' ? 0 : kRaw);
+      if (isNaN(debit) || isNaN(kredit)){ g.errs.push('baris ' + line + ': debit/kredit bukan angka'); return; }
+      if (!code){ g.errs.push('baris ' + line + ': kode akun kosong'); return; }
+      if (!coaByCode(code) && !incoming.has(code)){ g.errs.push('baris ' + line + ': akun ' + code + ' tidak ditemukan'); return; }
+      if ((debit > 0) === (kredit > 0)){ g.errs.push('baris ' + line + ': isi salah satu saja, Debit atau Kredit (lebih dari nol)'); return; }
+      if (debit < 0 || kredit < 0){ g.errs.push('baris ' + line + ': nilai tidak boleh negatif'); return; }
+      g.lines.push({account: code, debit, kredit});
+    });
+    groups.forEach(g => {
+      if (!g.date) g.errs.push('tanggal kosong atau formatnya tidak dikenali');
+      else if (isPeriodLocked(g.date)) g.errs.push('periode ' + monthLabel(g.date.slice(0,7)) + ' sudah dikunci');
+      if (g.lines.length < 2 && !g.errs.length) g.errs.push('minimal 2 baris akun');
+      const d = g.lines.reduce((s,l)=>s+l.debit,0), k = g.lines.reduce((s,l)=>s+l.kredit,0);
+      if (!g.errs.length && Math.abs(d - k) > 0.5) g.errs.push('tidak seimbang (Debit ' + fmtRp(d) + ' vs Kredit ' + fmtRp(k) + ')');
+      if (g.errs.length){ plan.jurnal.bad.push({label: g.label, errs: g.errs}); return; }
+      g.total = d;
+      const dupe = DB.journal.some(j => !j.deleted && j.date === g.date && (j.ref||'') === g.ref && g.ref && Math.abs(journalTotals(j).debit - d) < 0.5 && (j.desc||'') === (g.desc||''));
+      (dupe ? plan.jurnal.dup : plan.jurnal.ok).push(g);
+    });
+    plan.jurnal.bad.forEach(b => plan.problems.push('Jurnal ' + b.label + ': ' + b.errs.join('; ')));
+  }
+  return plan;
+}
+let importPlan = null;
+function triggerImportExcel(){ document.getElementById('xlsxFileInput').click(); }
+async function handleImportExcel(input){
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat mengimpor data.'); input.value=''; return; }
+  try {
+    const XL = await loadXLSX();
+    const buf = await file.arrayBuffer();
+    const wb = XL.read(buf, {type:'array'});
+    importPlan = buildImportPlan(XL, wb);
+  } catch(e){ alert('File tidak bisa dibaca: ' + e.message); input.value=''; return; }
+  input.value = '';
+  showImportPreview();
+}
+function showImportPreview(){
+  const p = importPlan;
+  const nothing = !p.coa.add.length && !p.coa.upd.length && !p.jurnal.ok.length;
+  const found = p.sheets.length;
+  const stat = (n, label) => `<div class="field" style="min-width:120px;"><label>${label}</label><div style="font-size:20px; font-weight:600;">${n}</div></div>`;
+  const probs = p.problems.slice(0, 20).map(x => `<li>${esc(x)}</li>`).join('') + (p.problems.length > 20 ? `<li>…dan ${p.problems.length - 20} masalah lain</li>` : '');
+  const body = !found
+    ? `<div class="balance-check bad">Tidak ada sheet "Kode Akun" atau "Jurnal" dengan judul kolom yang dikenali. Unduh template untuk melihat formatnya.</div>`
+    : `<div class="row" style="gap:12px; flex-wrap:wrap;">
+        ${stat(p.coa.add.length, 'Akun baru')}${stat(p.coa.upd.length, 'Akun diperbarui')}
+        ${stat(p.jurnal.ok.length, 'Jurnal siap masuk')}${stat(p.jurnal.dup.length + p.jurnal.bad.length, 'Dilewati')}
+      </div>
+      ${p.jurnal.dup.length ? `<div class="hint" style="margin-top:10px;">${p.jurnal.dup.length} jurnal dilewati karena sudah ada (tanggal, referensi, keterangan, dan nominal sama).</div>` : ''}
+      ${p.problems.length ? `<div class="balance-check bad" style="margin-top:12px;"><strong>Perlu diperbaiki di file (${p.problems.length}):</strong><ul style="margin:6px 0 0 18px;">${probs}</ul></div>` : ''}
+      ${nothing ? '<div class="balance-check bad" style="margin-top:12px;">Tidak ada data yang bisa diimpor.</div>' : '<div class="hint" style="margin-top:12px;">Baris yang bermasalah tidak ikut diimpor; sisanya masuk. Versi saat ini disimpan otomatis ke Riwayat Versi sebelum impor, dan bisa diurungkan dengan tombol Undo.</div>'}`;
+  openModal('Pratinjau Impor Excel', body,
+    `<button class="btn btn-outline" onclick="importPlan=null;closeModal()">Batal</button>
+     <button class="btn btn-primary" id="imp_go" onclick="confirmImportExcel()" ${nothing?'disabled':''}>Impor Sekarang</button>`);
+}
+async function confirmImportExcel(){
+  const p = importPlan;
+  if (!p) return;
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat mengimpor data.'); return; }
+  const go = document.getElementById('imp_go'); if (go){ go.disabled = true; go.textContent = 'Mengimpor…'; }
+  if (authCompany){ try { await versiInsert('manual', 'Sebelum impor Excel', versiSnapshotNow()); } catch(e){} }
+  snapshotForUndo('Impor Excel');
+  p.coa.add.forEach(r => DB.coa.push({code:r.code, name:r.name, category:r.category, initial:r.initial||0, contra:!!r.contra, isCash:!!r.isCash}));
+  p.coa.upd.forEach(r => { const a = coaByCode(r.code); a.name = r.name; a.category = r.category;
+    if (r.initial !== undefined) a.initial = r.initial; if (r.contra !== undefined) a.contra = r.contra; if (r.isCash !== undefined) a.isCash = r.isCash; });
+  p.jurnal.ok.forEach(g => addJournalEntry({date:g.date, ref:g.ref, desc:g.desc || 'Impor Excel', lines:g.lines, source:'manual'}));
+  logAudit('Impor', 'Excel', p.coa.add.length + ' akun baru, ' + p.coa.upd.length + ' akun diperbarui, ' + p.jurnal.ok.length + ' jurnal, ' + (p.jurnal.dup.length + p.jurnal.bad.length) + ' dilewati');
+  importPlan = null;
+  closeModal();
+  renderCurrent();
+}
+function renderExcel(){
+  const canImport = isAdminLevel();
+  const fs = fiscalYearBounds().start;
+  const btn = (w, label) => `<button class="btn btn-outline ex-btn" onclick="exportExcel('${w}')">${label}</button>`;
+  setContent(`
+    <div class="section">
+      <div class="section-head"><div><h2>Ekspor ke Excel</h2><div class="hint">Unduh data dan laporan sebagai file .xlsx</div></div></div>
+      <div class="section-body">
+        <div class="filters" style="margin-bottom:16px;">
+          <div class="field"><label>Jurnal dari tanggal</label><input type="date" id="ex_from" value="${esc(fs)}"></div>
+          <div class="field"><label>Sampai / Neraca Saldo per</label><input type="date" id="ex_to" value="${todayISO()}"></div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-primary ex-btn" onclick="exportExcel('all')">Laporan lengkap (5 sheet)</button>
+          ${btn('jurnal','Jurnal Umum')}${btn('saldo','Neraca Saldo')}${btn('labarugi','Laba Rugi')}${btn('neraca','Neraca')}${btn('coa','Kode Akun')}
+        </div>
+        <div class="hint" style="margin-top:12px;">Laba Rugi dan Neraca mengikuti tahun fiskal yang sedang aktif. Angka diekspor sebagai angka asli sehingga bisa dijumlahkan dan difilter di Excel.</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head"><div><h2>Impor dari Excel</h2><div class="hint">Masukkan daftar akun, saldo awal, dan jurnal sekaligus dari file Excel</div></div></div>
+      <div class="section-body">
+        ${canImport ? `
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+          <button class="btn btn-outline" onclick="downloadImportTemplate()">Unduh template</button>
+          <button class="btn btn-primary" onclick="triggerImportExcel()">Pilih file Excel…</button>
+          <input type="file" id="xlsxFileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleImportExcel(this)">
+        </div>
+        <div class="hint" style="line-height:1.7;">Gunakan template agar kolomnya pas. Sebelum data masuk Anda akan melihat pratinjau, termasuk baris yang bermasalah. Jurnal yang tidak seimbang, akun yang tidak dikenal, atau bertanggal di periode yang terkunci tidak akan diimpor.</div>`
+        : '<div class="balance-check bad">Impor hanya dapat dilakukan oleh Owner atau Admin.</div>'}
+      </div>
+    </div>
+  `);
+}
+
+/* ================= RIWAYAT VERSI & BACKUP ================= */
+let versiRows = null, versiLoading = false, versiErr = '';
+let versiAutoCo = null, versiAutoTs = 0, versiAutoBusy = false;
+const VERSI_KIND = {auto:'Otomatis harian', manual:'Manual', pre_restore:'Sebelum pemulihan'};
+function versiSnapshotNow(){
+  const s = {};
+  BACKUP_KEYS.forEach(k => { s[k] = JSON.parse(JSON.stringify(DB[k])); });
+  return s;
+}
+function versiSummary(d){
+  return {akun: (d.coa||[]).length, jurnal: (d.journal||[]).filter(j=>!j.deleted).length, invoice: (d.invoices||[]).length, aset: (d.fixedAssets||[]).length};
+}
+async function versiInsert(kind, label, data){
+  if (!authCompany) throw new Error('Belum masuk ke perusahaan.');
+  const r = await authRest('akt_snapshots', 'POST', {
+    company_id: authCompany.id, kind, label: label || '', created_by: (authProfile && authProfile.email) || '',
+    size_bytes: JSON.stringify(data).length, summary: versiSummary(data), data
+  });
+  return r && r[0];
+}
+async function versiPruneKind(kind, keep){
+  const old = await authRest('akt_snapshots?company_id=eq.' + encodeURIComponent(authCompany.id) + '&kind=eq.' + kind + '&select=id&order=created_at.desc&offset=' + keep + '&limit=200', 'GET');
+  if (old && old.length) await authRest('akt_snapshots?id=in.(' + old.map(x=>x.id).join(',') + ')', 'DELETE');
+}
+async function versiPrune(){
+  if (!authCompany || authCompany.role !== 'owner') return;
+  await versiPruneKind('auto', 30);
+  await versiPruneKind('pre_restore', 10);
+}
+/* Cadangan otomatis harian: sebelum simpanan pertama hari ini ditulis, salin kondisi data di cloud saat itu
+   (yaitu data akhir hari sebelumnya), sehingga kesalahan hari ini selalu bisa dikembalikan. */
+async function versiAutoBeforePush(){
+  if (!authCompany || versiAutoBusy) return;
+  versiAutoBusy = true;
+  try {
+    const cid = authCompany.id;
+    if (versiAutoCo !== cid){
+      const r = await authRest('akt_snapshots?company_id=eq.' + encodeURIComponent(cid) + '&kind=eq.auto&select=created_at&order=created_at.desc&limit=1', 'GET');
+      versiAutoTs = r && r.length ? Date.parse(r[0].created_at) : 0;
+      versiAutoCo = cid;
+    }
+    if (Date.now() - versiAutoTs < 20*3600*1000) return;
+    const rows = await authRest(encodeURIComponent(supaConfig.table) + '?id=eq.' + encodeURIComponent(supaConfig.rowId) + '&select=data&limit=1', 'GET');
+    if (rows && rows.length && rows[0].data && Array.isArray(rows[0].data.coa)){
+      await versiInsert('auto', 'Cadangan otomatis harian', rows[0].data);
+      versiAutoTs = Date.now();
+      versiPrune().catch(()=>{});
+    }
+  } catch(e){ /* cadangan bersifat best-effort, tidak boleh menggagalkan penyimpanan */ }
+  finally { versiAutoBusy = false; }
+}
+async function versiLoad(){
+  if (!authCompany){ versiRows = []; versiErr = 'Riwayat versi hanya tersedia setelah masuk dan memilih perusahaan.'; versiRender(); return; }
+  versiLoading = true; versiErr = ''; versiRender();
+  try {
+    versiRows = await authRest('akt_snapshots?company_id=eq.' + encodeURIComponent(authCompany.id) + '&select=id,kind,label,created_by,created_at,size_bytes,summary&order=created_at.desc&limit=100', 'GET') || [];
+  } catch(e){ versiErr = 'Gagal memuat riwayat versi: ' + e.message; versiRows = versiRows || []; }
+  versiLoading = false;
+  versiRender();
+}
+function versiFmtWhen(ts){ const t = tsLocal(ts); return fmtDate(t.date) + ' ' + t.time; }
+function versiFmtSize(n){ return n > 1048576 ? (n/1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n/1024)) + ' KB'; }
+function versiRender(){
+  const el = document.getElementById('versiBody');
+  if (!el || currentTab !== 'versi') return;
+  if (versiErr && !(versiRows && versiRows.length)){ el.innerHTML = `<div class="balance-check bad">${esc(versiErr)}</div>`; return; }
+  if (versiLoading && !versiRows){ el.innerHTML = '<div class="hint">Memuat…</div>'; return; }
+  const owner = isOwner();
+  const rows = (versiRows || []).map(r => {
+    const s = r.summary || {};
+    return `<tr>
+      <td class="tag-small">${esc(versiFmtWhen(r.created_at))}</td>
+      <td><span class="pill ${r.kind==='manual'?'pill-modal':r.kind==='auto'?'pill-aset':'pill-warn'}">${esc(VERSI_KIND[r.kind]||r.kind)}</span></td>
+      <td>${esc(r.label)}<div class="hint">${esc(r.created_by||'')}</div></td>
+      <td class="tag-small">${s.akun||0} akun &middot; ${s.jurnal||0} jurnal &middot; ${s.invoice||0} invoice</td>
+      <td class="tag-small">${versiFmtSize(r.size_bytes||0)}</td>
+      <td class="center" style="white-space:nowrap;">
+        <button class="btn btn-primary btn-sm" onclick="versiRestore('${r.id}')">Pulihkan</button>
+        <button class="btn btn-outline btn-sm" onclick="versiDownload('${r.id}')">Unduh</button>
+        ${owner ? `<button class="btn btn-danger btn-sm" onclick="versiDelete('${r.id}')">Hapus</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('') || `<tr class="empty-row"><td colspan="6">Belum ada versi tersimpan. Cadangan otomatis dibuat setiap hari saat ada perubahan, atau simpan versi sekarang.</td></tr>`;
+  el.innerHTML = (versiErr ? `<div class="balance-check bad" style="margin-bottom:12px;">${esc(versiErr)}</div>` : '') +
+    `<div class="scrollx"><table>
+      <thead><tr><th>Waktu</th><th>Jenis</th><th>Keterangan</th><th>Isi</th><th>Ukuran</th><th class="center">Aksi</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+}
+function renderVersi(){
+  setContent(`
+    <div class="section">
+      <div class="section-head">
+        <div><h2>Riwayat Versi &amp; Backup</h2><div class="hint">Salinan data perusahaan <strong>${esc((authCompany&&authCompany.name)||DB.company.name||'')}</strong> di cloud. Bila ada yang salah hapus atau salah ubah, pulihkan ke versi sebelumnya.</div></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" onclick="versiSaveNow()">Simpan versi sekarang</button>
+          <button class="btn btn-outline btn-sm" onclick="versiLoad()">&#8635; Muat ulang</button>
+        </div>
+      </div>
+      <div class="section-body">
+        <div id="versiBody"><div class="hint">Memuat…</div></div>
+        <div class="hint" style="margin-top:12px; line-height:1.7;">Cadangan otomatis dibuat sekali sehari (30 terbaru disimpan). Versi manual disimpan sampai Owner menghapusnya. Saat memulihkan, kondisi saat ini disimpan dulu sebagai versi &ldquo;Sebelum pemulihan&rdquo;, jadi pemulihan sendiri bisa dibatalkan. Kunci periode dan log aktivitas tetap dipertahankan.</div>
+      </div>
+    </div>`);
+  versiLoad();
+}
+async function versiSaveNow(){
+  if (!authCompany){ alert('Masuk dan pilih perusahaan dulu.'); return; }
+  const label = prompt('Beri nama versi ini (mis. "Sebelum tutup buku Oktober"):', '');
+  if (label === null) return;
+  try {
+    await versiInsert('manual', label.trim() || 'Versi manual', versiSnapshotNow());
+    logAuditSilent('Versi', 'Simpan versi manual', label.trim());
+  } catch(e){ alert('Gagal menyimpan versi: ' + e.message); }
+  versiLoad();
+}
+async function versiFetchData(id){
+  const r = await authRest('akt_snapshots?id=eq.' + encodeURIComponent(id) + '&select=data&limit=1', 'GET');
+  if (!r || !r.length) throw new Error('Versi tidak ditemukan.');
+  const d = r[0].data;
+  if (!d || !Array.isArray(d.coa) || !Array.isArray(d.journal)) throw new Error('Isi versi tidak valid.');
+  return d;
+}
+async function versiRestore(id){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat memulihkan versi.'); return; }
+  const row = (versiRows || []).find(r => r.id === id);
+  const when = row ? versiFmtWhen(row.created_at) : '';
+  if (!confirm('Pulihkan data perusahaan ke versi ' + when + '?\n\nData saat ini akan diganti. Kondisi saat ini disimpan dulu sebagai versi "Sebelum pemulihan" sehingga bisa dikembalikan lagi.')) return;
+  try {
+    const data = await versiFetchData(id);
+    await versiInsert('pre_restore', 'Sebelum memulihkan versi ' + when, versiSnapshotNow());
+    snapshotForUndo('Pulihkan Versi');
+    const keepLock = DB.lockedUntil || '', keepAudit = DB.auditLog;
+    BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = JSON.parse(JSON.stringify(data[k])); });
+    const dl = data.lockedUntil || '';
+    DB.lockedUntil = keepLock > dl ? keepLock : dl;
+    DB.auditLog = keepAudit;
+    logAudit('Pulihkan Versi', when, row ? row.label : '');
+    await supaPush(true);
+    renderCurrent();
+    alert('Data berhasil dipulihkan ke versi ' + when + '.');
+  } catch(e){ alert('Gagal memulihkan: ' + e.message); }
+}
+async function versiDownload(id){
+  try {
+    const data = await versiFetchData(id);
+    const row = (versiRows || []).find(r => r.id === id);
+    const payload = {app:'buku-akuntansi-backup', version:1, savedAt: row ? row.created_at : new Date().toISOString(), data};
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'versi-' + (row ? tsLocal(row.created_at).date : todayISO()) + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  } catch(e){ alert('Gagal mengunduh: ' + e.message); }
+}
+async function versiDelete(id){
+  if (!isOwner()){ alert('Hanya Owner yang dapat menghapus versi.'); return; }
+  if (!confirm('Hapus versi ini secara permanen?')) return;
+  try { await authRest('akt_snapshots?id=eq.' + encodeURIComponent(id), 'DELETE'); }
+  catch(e){ alert('Gagal menghapus: ' + e.message); }
+  versiLoad();
+}
+
+
+
+/* ================= PENGATURAN PAJAK & PPN ================= */
+function defaultTaxSettings(){ return {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false}; }
+function taxSet(){ return Object.assign(defaultTaxSettings(), DB.taxSettings || {}); }
+function ppnRate(){ const r = Number(taxSet().ppnRate); return (isNaN(r) || r < 0 || r > 100) ? 11 : r; }
+function ppnFrac(){ return ppnRate() / 100; }
+function ppnLabel(){ return String(ppnRate()).replace('.', ','); }
+function ppnAccountCode(kind){
+  const s = taxSet();
+  const explicit = kind === 'keluaran' ? s.ppnKeluaranAcc : s.ppnMasukanAcc;
+  if (explicit && coaByCode(explicit)) return explicit;
+  const hit = DB.coa.find(a => a.name.toLowerCase().includes('ppn ' + kind));
+  return hit ? hit.code : '';
+}
+function saveTaxSettings(){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat mengubah pengaturan pajak.'); return; }
+  const rate = parseFloat(String(document.getElementById('tx_ppnrate').value).replace(',', '.'));
+  if (isNaN(rate) || rate < 0 || rate > 100){ alert('Tarif PPN harus berupa angka antara 0 dan 100.'); return; }
+  snapshotForUndo('Ubah Pengaturan Pajak');
+  DB.taxSettings = Object.assign(taxSet(), {
+    ppnRate: rate,
+    ppnKeluaranAcc: document.getElementById('tx_acc_k').value,
+    ppnMasukanAcc: document.getElementById('tx_acc_m').value
+  });
+  logAudit('Ubah', 'Pengaturan Pajak', 'Tarif PPN ' + rate + '%');
+  renderCurrent();
+}
+function saveUmkmOP(on){
+  snapshotForUndo('Ubah Pengaturan Pajak');
+  DB.taxSettings = Object.assign(taxSet(), {umkmOP: !!on});
+  renderCurrent();
+}
+
+/* ================= PPN MASA ================= */
+function ppnMonthlyRows(){
+  const kAcc = ppnAccountCode('keluaran'), mAcc = ppnAccountCode('masukan');
+  let carry = 0;
+  return fiscalMonths().map(mk => {
+    const r = monthRangeISO(mk);
+    const km = kAcc ? accountMovementInRange(kAcc, r.start, r.end) : {debit:0, kredit:0};
+    const mm = mAcc ? accountMovementInRange(mAcc, r.start, r.end) : {debit:0, kredit:0};
+    const keluaran = km.kredit - km.debit;
+    const masukan = mm.debit - mm.kredit;
+    const net = keluaran - masukan - carry;
+    const bayar = Math.max(net, 0);
+    carry = Math.max(-net, 0);
+    const nm = new Date(Date.UTC(+mk.slice(0,4), +mk.slice(5,7), 1)); // bulan berikutnya
+    const nextKey = nm.getUTCFullYear() + '-' + String(nm.getUTCMonth() + 1).padStart(2, '0');
+    return {mk, keluaran, masukan, bayar, kompensasi: carry, jatuhTempo: lastDayOfMonthISO(nextKey)};
+  });
+}
+function ppnFakturRows(){
+  const months = fiscalMonths(); const lo = months[0] + '-01', hi = lastDayOfMonthISO(months[months.length - 1]);
+  return DB.invoices.filter(i => i.ppn && i.date >= lo && i.date <= hi).sort((a,b) => a.date.localeCompare(b.date) || a.no - b.no);
+}
+function ppnMasukanLines(){
+  const mAcc = ppnAccountCode('masukan'); if (!mAcc) return [];
+  const months = fiscalMonths(); const lo = months[0] + '-01', hi = lastDayOfMonthISO(months[months.length - 1]);
+  const out = [];
+  activeJournal().filter(j => j.date >= lo && j.date <= hi).sort((a,b) => a.date.localeCompare(b.date) || a.no - b.no).forEach(j => j.lines.forEach(l => {
+    if (l.account === mAcc && (l.debit || l.kredit)) out.push({date:j.date, ref:j.ref||'', desc:j.desc, amount:(l.debit||0) - (l.kredit||0)});
+  }));
+  return out;
+}
+function ppnExportSheets(){
+  const rows1 = [['Masa Pajak','PPN Keluaran','PPN Masukan','Kurang Bayar','Lebih Bayar (dikompensasikan)','Batas Bayar & Lapor']];
+  ppnMonthlyRows().forEach(r => rows1.push([monthLabel(r.mk), r.keluaran, r.masukan, r.bayar, r.kompensasi, xlDateCell(r.jatuhTempo)]));
+  const rows2 = [['Tanggal','No Invoice','No Faktur Pajak','Nama Pembeli','NPWP / NIK Pembeli','DPP','PPN','Tarif PPN (%)']];
+  ppnFakturRows().forEach(i => rows2.push([xlDateCell(i.date), 'INV-' + String(i.no).padStart(4,'0'), i.fakturNo || '', i.customer, i.customerNpwp || '', i.dpp, i.ppnAmount, i.ppnRate != null ? i.ppnRate : 10]));
+  const rows3 = [['Tanggal','Referensi','Keterangan','PPN Masukan']];
+  ppnMasukanLines().forEach(x => rows3.push([xlDateCell(x.date), x.ref, x.desc, x.amount]));
+  return [
+    {name:'Rekap PPN', rows: rows1, widths:[18,16,16,16,26,20]},
+    {name:'Faktur Keluaran', rows: rows2, widths:[12,14,22,30,24,16,16,12], plainCols:[1,2,4,7]},
+    {name:'PPN Masukan', rows: rows3, widths:[12,16,44,16], plainCols:[1]}
+  ];
+}
+async function exportPpnExcel(){
+  try { await downloadXLSX('rekap-ppn-' + todayISO() + '.xlsx', ppnExportSheets()); logAuditSilent('Ekspor', 'Excel: Rekap PPN', 'Tahun fiskal ' + fiscalMonths()[0].slice(0,4)); }
+  catch(e){ alert(e.message); }
+}
+
+/* ================= PPh 21 (TER & Pasal 17) ================= */
+const TER_TABLES = {
+  A: [[5400000,0],[5650000,.25],[5950000,.5],[6300000,.75],[6750000,1],[7500000,1.25],[8550000,1.5],[9650000,1.75],[10050000,2],[10350000,2.25],[10700000,2.5],[11050000,3],[11600000,3.5],[12500000,4],[13750000,5],[15100000,6],[16950000,7],[19750000,8],[24150000,9],[26450000,10],[28000000,11],[30050000,12],[32400000,13],[35400000,14],[39100000,15],[43850000,16],[47800000,17],[51400000,18],[56300000,19],[62200000,20],[68600000,21],[77500000,22],[89000000,23],[103000000,24],[125000000,25],[157000000,26],[206000000,27],[337000000,28],[454000000,29],[550000000,30],[695000000,31],[910000000,32],[1400000000,33],[Infinity,34]],
+  B: [[6200000,0],[6500000,.25],[6850000,.5],[7300000,.75],[9200000,1],[10750000,1.5],[11250000,2],[11600000,2.5],[12600000,3],[13600000,4],[14950000,5],[16400000,6],[18450000,7],[21850000,8],[26000000,9],[27700000,10],[29350000,11],[31450000,12],[33950000,13],[37100000,14],[41100000,15],[45800000,16],[49500000,17],[53800000,18],[58500000,19],[64000000,20],[71000000,21],[80000000,22],[93000000,23],[109000000,24],[129000000,25],[163000000,26],[211000000,27],[374000000,28],[459000000,29],[555000000,30],[704000000,31],[957000000,32],[1405000000,33],[Infinity,34]],
+  C: [[6600000,0],[6950000,.25],[7350000,.5],[7800000,.75],[8850000,1],[9800000,1.25],[10950000,1.5],[11200000,1.75],[12050000,2],[12950000,3],[14150000,4],[15550000,5],[17050000,6],[19500000,7],[22700000,8],[26600000,9],[28100000,10],[30100000,11],[32600000,12],[35400000,13],[38900000,14],[43000000,15],[47400000,16],[51200000,17],[55800000,18],[60400000,19],[66700000,20],[74500000,21],[83200000,22],[95600000,23],[110000000,24],[134000000,25],[169000000,26],[221000000,27],[390000000,28],[463000000,29],[561000000,30],[709000000,31],[965000000,32],[1419000000,33],[Infinity,34]]
+};
+const PTKP_STATUS = {
+  'TK/0':{ptkp:54000000, cat:'A'}, 'TK/1':{ptkp:58500000, cat:'A'}, 'K/0':{ptkp:58500000, cat:'A'},
+  'TK/2':{ptkp:63000000, cat:'B'}, 'K/1':{ptkp:63000000, cat:'B'},
+  'TK/3':{ptkp:67500000, cat:'B'}, 'K/2':{ptkp:67500000, cat:'B'},
+  'K/3':{ptkp:72000000, cat:'C'}
+};
+function terRate(cat, bruto){
+  const t = TER_TABLES[cat];
+  for (let i = 0; i < t.length; i++) if (bruto <= t[i][0]) return t[i][1];
+  return t[t.length - 1][1];
+}
+function pph21Ter(cat, bruto){ return Math.floor(Math.max(bruto, 0) * terRate(cat, bruto) / 100); }
+function pph21Progressive(pkp){
+  pkp = Math.floor(Math.max(pkp, 0) / 1000) * 1000;
+  const layers = [[60000000,.05],[250000000,.15],[500000000,.25],[5000000000,.30],[Infinity,.35]];
+  let tax = 0, lower = 0;
+  for (const [upper, rate] of layers){
+    if (pkp > lower) tax += (Math.min(pkp, upper) - lower) * rate;
+    lower = upper;
+    if (pkp <= upper) break;
+  }
+  return Math.floor(tax);
+}
+function pph21Desember(brutoSetahun, ptkp, pphJanNov){
+  const biayaJabatan = Math.min(brutoSetahun * 0.05, 6000000);
+  const neto = brutoSetahun - biayaJabatan;
+  const pkp = Math.floor(Math.max(neto - ptkp, 0) / 1000) * 1000;
+  const setahun = pph21Progressive(pkp);
+  return {biayaJabatan, neto, pkp, setahun, desember: setahun - pphJanNov};
+}
+
+/* ================= PPh 23 & PPh Final UMKM ================= */
+const PPH23_JENIS = {
+  jasa: {label:'Jasa (konsultan, teknik, manajemen, hukum, dll.)', rate:2},
+  sewa: {label:'Sewa harta selain tanah/bangunan', rate:2},
+  dividen: {label:'Dividen, bunga, royalti, hadiah/penghargaan', rate:15}
+};
+function pph23Calc(bruto, jenis, punyaNpwp){
+  const base = (PPH23_JENIS[jenis] || PPH23_JENIS.jasa).rate;
+  const rate = punyaNpwp ? base : base * 2;
+  return {rate, tax: Math.floor(Math.max(bruto, 0) * rate / 100)};
+}
+const UMKM_BEBAS_OP = 500000000, UMKM_BATAS = 4800000000;
+function umkmCalc(omzetBulan, omzetSebelumnya, isOP){
+  const ytd = omzetSebelumnya + omzetBulan;
+  let dasar = omzetBulan;
+  if (isOP){
+    const kenaSebelum = Math.max(omzetSebelumnya - UMKM_BEBAS_OP, 0);
+    const kenaSesudah = Math.max(ytd - UMKM_BEBAS_OP, 0);
+    dasar = kenaSesudah - kenaSebelum;
+  }
+  return {ytd, dasar, tax: Math.floor(dasar * 0.005), lewatBatas: ytd > UMKM_BATAS};
+}
+function umkmOmzetFor(mk){
+  const months = fiscalMonths();
+  const rev = DB.coa.filter(a => a.category === 'Pendapatan');
+  const flow = m => { const r = monthRangeISO(m); return rev.reduce((s,a) => s + accountFlowInRange(a, r.start, r.end), 0); };
+  let before = 0;
+  for (const m of months){ if (m === mk) break; before += flow(m); }
+  return {bulan: flow(mk), sebelumnya: before};
+}
+
+/* ================= HALAMAN PAJAK ================= */
+function renderPajak(){
+  const months = fiscalMonths();
+  const curMonth = months.includes(todayISO().slice(0,7)) ? todayISO().slice(0,7) : months[0];
+  const s = taxSet();
+  const canEdit = isAdminLevel();
+  const acctOpts = (sel) => '<option value="">(belum dipilih)</option>' + DB.coa.slice().sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true}))
+    .map(a => `<option value="${esc(a.code)}" ${a.code===sel?'selected':''}>${esc(a.code)} — ${esc(a.name)}</option>`).join('');
+  const rows = ppnMonthlyRows();
+  const sumK = rows.reduce((t,r)=>t+r.keluaran,0), sumM = rows.reduce((t,r)=>t+r.masukan,0), sumB = rows.reduce((t,r)=>t+r.bayar,0);
+  const faktur = ppnFakturRows();
+  const ppnRows = rows.map(r => `<tr>
+      <td>${esc(monthLabel(r.mk))}</td><td class="num">${fmtRp(r.keluaran)}</td><td class="num">${fmtRp(r.masukan)}</td>
+      <td class="num">${r.bayar ? fmtRp(r.bayar) : '-'}</td><td class="num">${r.kompensasi ? fmtRp(r.kompensasi) : '-'}</td>
+      <td class="tag-small">${fmtDate(r.jatuhTempo)}</td></tr>`).join('');
+  const fakturRows = faktur.length ? faktur.map(i => `<tr>
+      <td class="tag-small">${fmtDate(i.date)}</td><td class="tag-small">INV-${String(i.no).padStart(4,'0')}</td>
+      <td>${esc(i.fakturNo || '')}${i.fakturNo ? '' : '<span class="muted">belum diisi</span>'}</td><td>${esc(i.customer)}</td>
+      <td class="tag-small">${esc(i.customerNpwp || '-')}</td><td class="num">${fmtRp(i.dpp)}</td><td class="num">${fmtRp(i.ppnAmount)}</td></tr>`).join('')
+    : `<tr class="empty-row"><td colspan="7">Belum ada invoice ber-PPN pada tahun fiskal ini.</td></tr>`;
+  const ptkpOpts = Object.keys(PTKP_STATUS).map(k => `<option value="${k}">${k} — PTKP ${fmtRp(PTKP_STATUS[k].ptkp)}/tahun (TER ${PTKP_STATUS[k].cat})</option>`).join('');
+  const um = umkmOmzetFor(curMonth);
+
+  setContent(`
+    <div class="section">
+      <div class="section-head"><div><h2>Pajak</h2><div class="hint">Alat bantu hitung dan rekap pajak. Bukan pengganti perhitungan resmi DJP atau konsultan pajak</div></div></div>
+      <div class="section-body">
+        <div class="balance-check bad">&#9888; Aturan dan tarif pajak bisa berubah. Rekap dan hitungan di sini untuk perencanaan internal. Verifikasi ke konsultan pajak atau Coretax DJP sebelum pembayaran dan pelaporan.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2>Pengaturan PPN</h2><div class="hint">Dipakai untuk invoice, jurnal penjualan/pembelian, dan rekap PPN di bawah</div></div></div>
+      <div class="section-body">
+        <div class="filters">
+          <div class="field"><label>Tarif PPN yang dikenakan (%)</label><input id="tx_ppnrate" value="${esc(String(s.ppnRate))}" ${canEdit?'':'disabled'}></div>
+          <div class="field"><label>Akun PPN Keluaran</label><select id="tx_acc_k" ${canEdit?'':'disabled'}>${acctOpts(ppnAccountCode('keluaran'))}</select></div>
+          <div class="field"><label>Akun PPN Masukan</label><select id="tx_acc_m" ${canEdit?'':'disabled'}>${acctOpts(ppnAccountCode('masukan'))}</select></div>
+          ${canEdit ? '<button class="btn btn-primary" onclick="saveTaxSettings()">Simpan</button>' : ''}
+        </div>
+        <div class="hint" style="margin-top:12px; line-height:1.7;">Sejak 1 Januari 2025 tarif PPN umum tertulis 12%, tetapi untuk barang dan jasa non-mewah dasar pengenaannya 11/12 dari harga, sehingga yang dibayar efektif <strong>11%</strong> (PMK 131/2024). Barang mewah dikenai 12% penuh. Isi 11 untuk kondisi umum atau 12 bila memang barang mewah. Invoice lama tetap memakai tarif saat dibuat.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div><h2>Rekap PPN per Masa Pajak</h2><div class="hint">Dihitung dari mutasi akun PPN di jurnal tahun fiskal ${esc(months[0].slice(0,4))}. Lebih bayar otomatis dikompensasikan ke bulan berikutnya</div></div>
+        <button class="btn btn-outline btn-sm ex-btn" onclick="exportPpnExcel()">Unduh Excel (3 sheet)</button>
+      </div>
+      <div class="section-body scrollx">
+        <table>
+          <thead><tr><th>Masa Pajak</th><th class="num">PPN Keluaran</th><th class="num">PPN Masukan</th><th class="num">Kurang Bayar</th><th class="num">Lebih Bayar</th><th>Batas bayar &amp; lapor</th></tr></thead>
+          <tbody>${ppnRows}</tbody>
+          <tfoot><tr class="tot"><td>Total</td><td class="num">${fmtRp(sumK)}</td><td class="num">${fmtRp(sumM)}</td><td class="num">${fmtRp(sumB)}</td><td></td><td></td></tr></tfoot>
+        </table>
+      </div>
+      <div class="section-body" style="padding-top:0;">
+        ${(ppnAccountCode('keluaran') && ppnAccountCode('masukan')) ? '' : '<div class="balance-check bad" style="margin-bottom:10px;">Akun PPN Keluaran atau PPN Masukan belum ditemukan. Pilih akunnya di Pengaturan PPN di atas.</div>'}
+        <div class="hint">Batas bayar dan lapor SPT Masa PPN adalah akhir bulan berikutnya. Aplikasi ini tidak terhubung ke Coretax. Gunakan rekap ini untuk mengisi atau mengimpor faktur di Coretax.</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2>Daftar Faktur Pajak Keluaran</h2><div class="hint">Dari invoice ber-PPN. Isi No. Faktur Pajak dan NPWP/NIK pembeli saat membuat invoice</div></div></div>
+      <div class="section-body scrollx">
+        <table>
+          <thead><tr><th>Tanggal</th><th>Invoice</th><th>No. Faktur Pajak</th><th>Pembeli</th><th>NPWP / NIK</th><th class="num">DPP</th><th class="num">PPN</th></tr></thead>
+          <tbody>${fakturRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2>PPh 21 Karyawan Tetap</h2><div class="hint">Januari sampai November memakai tarif efektif rata-rata (TER). Desember dihitung ulang setahun dengan tarif Pasal 17 (PP 58/2023, PMK 168/2023)</div></div></div>
+      <div class="section-body">
+        <div class="filters">
+          <div class="field"><label>Status PTKP</label><select id="p21_status" onchange="calcPph21Ui()">${ptkpOpts}</select></div>
+          <div class="field"><label>Penghasilan bruto per bulan</label><input id="p21_gaji" type="number" value="8000000" oninput="calcPph21Ui()"></div>
+          <div class="field"><label>Masa pajak</label><select id="p21_masa" onchange="calcPph21Ui()"><option value="ter">Januari sampai November (TER)</option><option value="des">Desember (hitung ulang setahun)</option></select></div>
+        </div>
+        <div id="p21_des" style="display:none; margin-top:12px;" class="filters">
+          <div class="field"><label>Total bruto setahun</label><input id="p21_setahun" type="number" oninput="p21SetahunTouched=true; calcPph21Ui()"></div>
+          <div class="field"><label>PPh 21 yang sudah dipotong Jan sampai Nov</label><input id="p21_jannov" type="number" oninput="p21JanNovTouched=true; calcPph21Ui()"></div>
+        </div>
+        <div id="p21_out" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2>PPh 23</h2><div class="hint">Dipotong pemberi kerja atas pembayaran jasa, sewa, atau penghasilan tertentu ke pihak lain</div></div></div>
+      <div class="section-body">
+        <div class="filters">
+          <div class="field" style="max-width:360px;"><label>Jenis penghasilan</label><select id="p23_jenis" onchange="calcPph23Ui()">${Object.keys(PPH23_JENIS).map(k=>`<option value="${k}">${esc(PPH23_JENIS[k].label)} (${PPH23_JENIS[k].rate}%)</option>`).join('')}</select></div>
+          <div class="field"><label>Jumlah bruto</label><input id="p23_bruto" type="number" value="5000000" oninput="calcPph23Ui()"></div>
+          <label style="display:flex; align-items:center; gap:6px; padding-bottom:10px;"><input type="checkbox" id="p23_npwp" checked style="width:auto;" onchange="calcPph23Ui()"> Penerima punya NPWP</label>
+        </div>
+        <div id="p23_out" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div><h2>PPh Final UMKM (0,5%)</h2><div class="hint">PP 55/2022. Dasarnya omzet bruto dari akun Pendapatan, berlaku untuk omzet sampai Rp4,8 miliar per tahun</div></div></div>
+      <div class="section-body">
+        <div class="filters">
+          <div class="field"><label>Bulan</label><select id="um_bulan" onchange="calcUmkmUi()">${months.map(mk=>`<option value="${mk}" ${mk===curMonth?'selected':''}>${esc(monthLabel(mk))}</option>`).join('')}</select></div>
+          <label style="display:flex; align-items:center; gap:6px; padding-bottom:10px;"><input type="checkbox" id="um_op" ${s.umkmOP?'checked':''} ${canEdit?'':'disabled'} style="width:auto;" onchange="saveUmkmOP(this.checked)"> Wajib Pajak orang pribadi (omzet sampai Rp500 juta per tahun bebas pajak)</label>
+        </div>
+        <div id="um_out" style="margin-top:14px;"></div>
+        <div class="hint" style="margin-top:10px;">Tarif final ini berlaku untuk jangka waktu terbatas: 7 tahun untuk orang pribadi, 4 tahun untuk CV, firma, dan koperasi, 3 tahun untuk PT. Cek kelayakan Anda ke DJP.</div>
+      </div>
+    </div>
+  `);
+  p21SetahunTouched = false; p21JanNovTouched = false;
+  calcPph21Ui(); calcPph23Ui(); calcUmkmUi();
+}
+let p21SetahunTouched = false, p21JanNovTouched = false;
+function calcPph21Ui(){
+  const st = PTKP_STATUS[document.getElementById('p21_status').value];
+  const gaji = parseNum(document.getElementById('p21_gaji').value);
+  const des = document.getElementById('p21_masa').value === 'des';
+  document.getElementById('p21_des').style.display = des ? '' : 'none';
+  const out = document.getElementById('p21_out');
+  const rate = terRate(st.cat, gaji), ter = pph21Ter(st.cat, gaji);
+  const line = (a, b, strong) => `<tr${strong?' class="tot"':''}><td>${a}</td><td class="num">${b}</td></tr>`;
+  if (!des){
+    out.innerHTML = `<table style="max-width:520px;">${line('Kategori TER', 'TER ' + st.cat)}${line('Tarif efektif', String(rate).replace('.',',') + '%')}${line('PPh 21 bulan ini', fmtRp(ter), true)}</table>`;
+    return;
+  }
+  const setahunEl = document.getElementById('p21_setahun'), janNovEl = document.getElementById('p21_jannov');
+  if (!p21SetahunTouched) setahunEl.value = String(gaji * 12);
+  if (!p21JanNovTouched) janNovEl.value = String(ter * 11);
+  const d = pph21Desember(parseNum(setahunEl.value), st.ptkp, parseNum(janNovEl.value));
+  out.innerHTML = `<table style="max-width:560px;">
+    ${line('Penghasilan bruto setahun', fmtRp(parseNum(setahunEl.value)))}
+    ${line('Biaya jabatan (5%, maks Rp6.000.000)', '- ' + fmtRp(d.biayaJabatan))}
+    ${line('Penghasilan neto setahun', fmtRp(d.neto))}
+    ${line('PTKP ' + document.getElementById('p21_status').value, '- ' + fmtRp(st.ptkp))}
+    ${line('Penghasilan kena pajak (dibulatkan ribuan)', fmtRp(d.pkp))}
+    ${line('PPh 21 setahun (tarif Pasal 17)', fmtRp(d.setahun))}
+    ${line('Sudah dipotong Jan sampai Nov', '- ' + fmtRp(parseNum(janNovEl.value)))}
+    ${line(d.desember >= 0 ? 'PPh 21 Desember (kurang potong)' : 'Lebih potong (dikembalikan)', fmtRp(Math.abs(d.desember)), true)}</table>
+    <div class="hint" style="margin-top:8px;">Perhitungan ini belum memasukkan iuran pensiun/JHT, tunjangan, THR, atau bonus. Masukkan total bruto setahun yang sebenarnya.</div>`;
+}
+function calcPph23Ui(){
+  const r = pph23Calc(parseNum(document.getElementById('p23_bruto').value), document.getElementById('p23_jenis').value, document.getElementById('p23_npwp').checked);
+  document.getElementById('p23_out').innerHTML = `<table style="max-width:420px;"><tr><td>Tarif</td><td class="num">${String(r.rate).replace('.',',')}%${document.getElementById('p23_npwp').checked ? '' : ' (tanpa NPWP, 2x lipat)'}</td></tr><tr class="tot"><td>PPh 23 dipotong</td><td class="num">${fmtRp(r.tax)}</td></tr></table>`;
+}
+function calcUmkmUi(){
+  const mk = document.getElementById('um_bulan').value;
+  const o = umkmOmzetFor(mk);
+  const r = umkmCalc(o.bulan, o.sebelumnya, taxSet().umkmOP);
+  document.getElementById('um_out').innerHTML = `<table style="max-width:520px;">
+    <tr><td>Omzet bulan ini</td><td class="num">${fmtRp(o.bulan)}</td></tr>
+    <tr><td>Omzet kumulatif tahun ini</td><td class="num">${fmtRp(r.ytd)}</td></tr>
+    <tr><td>Dasar pengenaan bulan ini</td><td class="num">${fmtRp(r.dasar)}</td></tr>
+    <tr class="tot"><td>PPh Final 0,5%</td><td class="num">${fmtRp(r.tax)}</td></tr></table>
+    ${r.lewatBatas ? '<div class="balance-check bad" style="margin-top:10px;">Omzet kumulatif sudah melewati Rp4,8 miliar. Tarif final 0,5% tidak lagi berlaku untuk sisa tahun ini dan Anda perlu menghitung PPh dengan ketentuan umum.</div>' : ''}`;
+}
+
+/* ================= KOP & TANDA TANGAN CETAK ================= */
+const PRINT_TABS = ['jurnal','ledger','labarugi','neraca','aruskas','ekuitas','anggaran','penyusutan','inventory','pajak','rekonsiliasi'];
+function printSubtitle(){
+  try {
+    if (['labarugi','aruskas','ekuitas'].includes(currentTab)) return 'Periode ' + fmtDate(fiscalYearBounds().start) + ' s.d. ' + fmtDate(reportAsOfDate());
+    if (currentTab === 'neraca') return 'Per ' + fmtDate(reportAsOfDate());
+    if (currentTab === 'pajak') return 'Tahun fiskal ' + fiscalMonths()[0].slice(0,4);
+  } catch(e){}
+  return '';
+}
+function printKopHtml(noTitle){
+  const c = DB.company || {};
+  const meta = [c.address, [c.city, c.province].filter(Boolean).join(', '), c.npwp ? 'NPWP ' + c.npwp : '', c.email].filter(Boolean).map(esc).join(' &middot; ');
+  const title = (TAB_META[currentTab] || {}).title || '';
+  const sub = printSubtitle();
+  return `<div class="print-only kop">
+    ${c.logo ? `<img class="kop-logo" src="${esc(c.logo)}" alt="">` : ''}
+    <div class="kop-txt"><div class="kop-name">${esc(c.name || '')}</div><div class="kop-meta">${meta}</div></div>
+  </div>
+  ${noTitle ? '' : `<div class="print-only kop-title"><div class="t">${esc(title)}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ''}</div>`}`;
+}
+function printSignHtml(){
+  const c = DB.company || {};
+  const place = [c.signCity || c.city, fmtDate(todayISO())].filter(Boolean).map(esc).join(', ');
+  return `<div class="print-only sign">
+    <div class="sign-place">${place}</div>
+    <div class="sign-cols">
+      <div class="sign-col"><div class="sign-role">Dibuat oleh</div><div class="sign-space"></div><div class="sign-name">${esc(c.preparedBy || '')}</div></div>
+      <div class="sign-col"><div class="sign-role">Disetujui oleh</div><div class="sign-space">${c.signImage ? `<img src="${esc(c.signImage)}" alt="">` : ''}</div><div class="sign-name">${esc(c.approvedBy || '')}</div>${c.approvedTitle ? `<div class="sign-title">${esc(c.approvedTitle)}</div>` : ''}</div>
+    </div>
+  </div>`;
+}
+function kopSectionHtml(){
+  const c = DB.company || {};
+  const prev = (key, label) => c[key] ? `<div style="margin:6px 0;"><img src="${esc(c[key])}" alt="${label}" style="max-height:70px; max-width:240px; border:1px solid var(--line); border-radius:6px; padding:4px; background:#fff;"></div>
+    <button class="btn btn-outline btn-sm" onclick="kopRemoveImage('${key}')">Hapus ${label.toLowerCase()}</button>` : '<div class="hint" style="margin:6px 0;">Belum ada.</div>';
+  return `<div class="section">
+    <div class="section-head"><div><h2>Kop &amp; Tanda Tangan Cetakan</h2><div class="hint">Muncul otomatis di bagian atas dan bawah saat Anda mencetak atau menyimpan laporan sebagai PDF</div></div></div>
+    <div class="section-body">
+      <div class="row">
+        <div class="field"><label>Logo perusahaan</label>${prev('logo','Logo')}<input type="file" accept="image/png,image/jpeg,image/webp" onchange="kopPickImage(this,'logo')"></div>
+        <div class="field"><label>Tanda tangan penyetuju (gambar, opsional)</label>${prev('signImage','Tanda tangan')}<input type="file" accept="image/png,image/jpeg,image/webp" onchange="kopPickImage(this,'signImage')"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Kota tanda tangan</label><input id="kp_city" value="${esc(c.signCity || '')}" placeholder="${esc(c.city || 'cth. Jakarta')}"></div>
+        <div class="field"><label>Dibuat oleh</label><input id="kp_prep" value="${esc(c.preparedBy || '')}" placeholder="Nama penyusun laporan"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Disetujui oleh</label><input id="kp_appr" value="${esc(c.approvedBy || '')}" placeholder="Nama pimpinan/pemilik"></div>
+        <div class="field"><label>Jabatan penyetuju</label><input id="kp_title" value="${esc(c.approvedTitle || '')}" placeholder="cth. Direktur"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveKop()">Simpan Kop &amp; Tanda Tangan</button>
+      <div class="hint" style="margin-top:10px;">Logo dikecilkan otomatis. Pakai gambar PNG berlatar transparan agar tampil rapi. Berlaku untuk laporan keuangan, buku besar, jurnal, dan invoice.</div>
+    </div>
+  </div>`;
+}
+function saveKop(){
+  snapshotForUndo('Ubah Kop & Tanda Tangan');
+  const g = id => (document.getElementById(id) || {}).value || '';
+  Object.assign(DB.company, {signCity: g('kp_city').trim(), preparedBy: g('kp_prep').trim(), approvedBy: g('kp_appr').trim(), approvedTitle: g('kp_title').trim()});
+  logAudit('Ubah', 'Kop & Tanda Tangan', '');
+  renderCurrent();
+}
+function kopRemoveImage(key){
+  snapshotForUndo('Hapus Gambar Kop');
+  delete DB.company[key];
+  logAudit('Ubah', 'Kop & Tanda Tangan', 'Hapus ' + key);
+  renderCurrent();
+}
+function imageFileToDataUrl(file, maxW, maxH){
+  return new Promise((res, rej) => {
+    if (!file || !/^image\//.test(file.type)) return rej(new Error('File harus berupa gambar (PNG, JPG, atau WebP).'));
+    if (file.size > 5 * 1024 * 1024) return rej(new Error('Ukuran gambar maksimal 5 MB.'));
+    const fr = new FileReader();
+    fr.onerror = () => rej(new Error('Gagal membaca file.'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => rej(new Error('Gambar tidak bisa dibuka.'));
+      img.onload = () => {
+        const k = Math.min(1, maxW / img.width, maxH / img.height);
+        const w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+        let url = cv.toDataURL('image/png');
+        if (url.length > 160000){
+          ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+          url = cv.toDataURL('image/jpeg', 0.85);
+        }
+        res(url);
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+async function kopPickImage(input, key){
+  const f = input.files && input.files[0]; if (!f) return;
+  try {
+    const url = await imageFileToDataUrl(f, key === 'logo' ? 360 : 300, key === 'logo' ? 180 : 120);
+    snapshotForUndo('Ubah Gambar Kop');
+    DB.company[key] = url;
+    logAudit('Ubah', 'Kop & Tanda Tangan', key === 'logo' ? 'Logo diperbarui' : 'Tanda tangan diperbarui');
+    renderCurrent();
+  } catch(e){ alert(e.message); }
+  input.value = '';
+}
+
+/* ================= VERIFIKASI 2 LANGKAH (TOTP) ================= */
+let mfaPending = null, mfaBannerDismissed = false;
+function authJwtAal(tok){
+  try { const p = String(tok).split('.')[1]; return JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/'))).aal || 'aal1'; }
+  catch(e){ return 'aal1'; }
+}
+function authTotpFactor(){
+  const fs = (authSession && authSession.user && authSession.user.factors) || [];
+  return fs.find(f => f.factor_type === 'totp' && f.status === 'verified') || null;
+}
+async function authRefreshUser(){
+  const u = await authCall('/user', 'GET', null, authSession.access_token);
+  if (u && u.id){ authSession.user = u; authSaveSession(); }
+  return u;
+}
+async function authSubmitMfa(ev){
+  ev.preventDefault();
+  const code = document.getElementById('au_code').value.replace(/\s/g, '');
+  const f = authTotpFactor();
+  if (!f){ await authAfterLogin(); return; }
+  authBusy(true);
+  try {
+    const ch = await authCall('/factors/' + f.id + '/challenge', 'POST', {}, authSession.access_token);
+    const j = await authCall('/factors/' + f.id + '/verify', 'POST', {challenge_id: ch.id, code}, authSession.access_token);
+    authStoreTokens(j);
+    await authAfterLogin();
+  } catch(e){ renderAuth('mfa', e.message, 'err'); }
+}
+function mfaSectionHtml(){
+  if (!authSession) return '<div class="hint">Masuk dulu untuk mengatur verifikasi 2 langkah.</div>';
+  const f = authTotpFactor();
+  return f
+    ? `<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><span class="pill pill-ok">Aktif</span>
+        <span class="hint">Setiap masuk, Anda diminta kode 6 digit dari aplikasi autentikator.</span>
+        <button class="btn btn-danger btn-sm" onclick="mfaDisable()">Nonaktifkan</button></div>`
+    : `<div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><span class="pill pill-warn">Belum aktif</span>
+        <span class="hint">Tambahkan lapisan keamanan kedua agar akun tetap aman walau password bocor.</span>
+        <button class="btn btn-primary btn-sm" onclick="mfaStartEnroll()">Aktifkan verifikasi 2 langkah</button></div>
+       <div id="mfaEnroll" style="margin-top:14px;"></div>`;
+}
+async function mfaStartEnroll(){
+  const box = document.getElementById('mfaEnroll'); if (!box) return;
+  box.innerHTML = '<div class="hint">Menyiapkan…</div>';
+  try {
+    const tok = authSession.access_token;
+    await authRefreshUser();
+    for (const old of (authSession.user.factors || []).filter(x => x.factor_type === 'totp' && x.status !== 'verified')){
+      try { await authCall('/factors/' + old.id, 'DELETE', null, tok); } catch(e){}
+    }
+    mfaPending = await authCall('/factors', 'POST', {factor_type:'totp', friendly_name:'Buku Akuntansi ' + Date.now().toString(36), issuer:'Buku Akuntansi'}, tok);
+    box.innerHTML = `<div style="display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;">
+      <div><img id="mfaQr" alt="Kode QR" width="176" height="176" style="border:1px solid var(--line); border-radius:8px; background:#fff; padding:6px;"></div>
+      <div style="flex:1; min-width:240px;">
+        <ol style="margin:0 0 12px 18px; line-height:1.7;">
+          <li>Buka aplikasi autentikator (Google Authenticator, Authy, Microsoft Authenticator, dll.).</li>
+          <li>Pindai kode QR ini, atau masukkan kunci manual: <code id="mfaSecret" style="user-select:all; word-break:break-all;"></code></li>
+          <li>Masukkan kode 6 digit yang muncul di aplikasi.</li>
+        </ol>
+        <div class="filters"><div class="field"><label>Kode 6 digit</label><input id="mfa_code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
+          <button class="btn btn-primary" onclick="mfaConfirmEnroll()">Aktifkan</button></div>
+      </div></div>`;
+    document.getElementById('mfaQr').src = (mfaPending.totp && mfaPending.totp.qr_code) || '';
+    document.getElementById('mfaSecret').textContent = (mfaPending.totp && mfaPending.totp.secret) || '';
+  } catch(e){ box.innerHTML = '<div class="balance-check bad">Gagal menyiapkan 2FA: ' + esc(e.message) + '</div>'; }
+}
+async function mfaConfirmEnroll(){
+  if (!mfaPending) return;
+  const code = (document.getElementById('mfa_code') || {}).value.replace(/\s/g, '');
+  try {
+    const tok = authSession.access_token;
+    const ch = await authCall('/factors/' + mfaPending.id + '/challenge', 'POST', {}, tok);
+    const j = await authCall('/factors/' + mfaPending.id + '/verify', 'POST', {challenge_id: ch.id, code}, tok);
+    authStoreTokens(j);
+    mfaPending = null;
+    await authRefreshUser();
+    logAuditSilent('Keamanan', 'Verifikasi 2 langkah', 'Diaktifkan');
+    renderCurrent();
+    alert('Verifikasi 2 langkah aktif. Mulai sekarang setiap masuk akan diminta kode dari aplikasi autentikator. Simpan akses ke aplikasi itu baik-baik.');
+  } catch(e){ alert(e.message); }
+}
+async function mfaDisable(){
+  const f = authTotpFactor(); if (!f) return;
+  if (!confirm('Nonaktifkan verifikasi 2 langkah? Akun Anda hanya dilindungi password.')) return;
+  try {
+    await authCall('/factors/' + f.id, 'DELETE', null, authSession.access_token);
+    await authRefreshUser();
+    logAuditSilent('Keamanan', 'Verifikasi 2 langkah', 'Dinonaktifkan');
+    renderCurrent();
+  } catch(e){ alert('Gagal menonaktifkan: ' + e.message); }
+}
+function authMfaBannerHtml(){
+  if (!authSession || mfaBannerDismissed || authTotpFactor() || !(isOwner() || isSysOwner())) return '';
+  return `<div class="balance-check bad" style="margin-bottom:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">&#128274; Amankan akun Owner Anda dengan verifikasi 2 langkah.
+    <a href="#" onclick="switchTab('setup'); return false;" style="color:inherit; font-weight:700; text-decoration:underline;">Aktifkan sekarang</a>
+    <a href="#" onclick="mfaBannerDismissed=true; renderCurrent(); return false;" style="margin-left:auto; color:inherit; opacity:.7;">Nanti</a></div>`;
+}
+const BASE_TITLE = document.title;
+function authUpdateTitle(){ document.title = (isSysOwner() && authPendingCount ? '(' + authPendingCount + ') ' : '') + BASE_TITLE; }
+
+
+/* ================= PANDUAN AWAL PERUSAHAAN BARU ================= */
+function onboardingSteps(){
+  const c = DB.company || {};
+  const hasTx = DB.journal.some(j => !j.deleted);
+  return [
+    {key:'profil', title:'Lengkapi profil perusahaan', desc:'Alamat dan NPWP tampil di kop laporan dan invoice.',
+      done: !!(c.address && String(c.address).trim()), act:"switchTab('setup')", cta:'Isi profil'},
+    {key:'akun', title:'Periksa kode akun dan isi saldo awal', desc:'Sudah ada 18 akun standar. Sesuaikan, atau impor daftar akun dan saldo awal dari Excel.',
+      done: DB.coa.some(a => (a.initial||0) !== 0) || hasTx, act:"switchTab('coa')", cta:'Buka kode akun', alt:"switchTab('excel')", altCta:'Impor Excel'},
+    {key:'transaksi', title:'Catat transaksi pertama', desc:'Mulai dari penerimaan atau pengeluaran kas, atau impor jurnal dari Excel.',
+      done: hasTx, act:"switchTab('jurnalkas')", cta:'Catat transaksi'},
+    {key:'tim', title:'Undang tim Anda (opsional)', desc:'Tambahkan staf atau admin lewat email akun yang sudah terdaftar dan disetujui.',
+      done: !!(DB.onboarding && DB.onboarding.team), act:"switchTab('pengaturan')", cta:'Atur anggota', manual:true, ownerOnly:true}
+  ].filter(x => !x.ownerOnly || isOwner());
+}
+function onboardingHtml(){
+  const ob = DB.onboarding || {dismissed:true};
+  if (ob.dismissed || isViewer() || isStaff()) return '';
+  const steps = onboardingSteps();
+  const done = steps.filter(x => x.done).length;
+  const pct = Math.round(done / steps.length * 100);
+  const rows = steps.map(x => `
+    <li class="onb-step${x.done?' done':''}">
+      <span class="onb-dot" aria-hidden="true">${x.done ? '&#10003;' : ''}</span>
+      <div class="onb-txt"><div class="onb-t">${esc(x.title)}</div><div class="onb-d">${esc(x.desc)}</div></div>
+      <div class="onb-act">${x.done ? '<span class="muted">Selesai</span>' : `
+        <button class="btn btn-primary btn-sm" onclick="${x.act}">${esc(x.cta)}</button>
+        ${x.alt ? `<button class="btn btn-outline btn-sm" onclick="${x.alt}">${esc(x.altCta)}</button>` : ''}
+        ${x.manual ? '<button class="btn btn-outline btn-sm" onclick="onboardingMarkTeam()">Lewati</button>' : ''}`}</div>
+    </li>`).join('');
+  return `<div class="onb">
+    <div class="onb-head">
+      <div><div class="onb-title">Selamat datang, mari siapkan ${esc((DB.company && DB.company.name) || 'perusahaan Anda')}</div>
+      <div class="onb-sub">${done} dari ${steps.length} langkah selesai</div></div>
+      <button class="btn btn-outline btn-sm" onclick="onboardingDismiss()">Sembunyikan</button>
+    </div>
+    <div class="onb-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><span style="width:${pct}%"></span></div>
+    <ul class="onb-list">${rows}</ul>
+  </div>`;
+}
+function onboardingTouch(){ unsavedChangeCount++; if (typeof scheduleAutoSync === 'function') scheduleAutoSync(); }
+function onboardingDismiss(){
+  if (!DB.onboarding) DB.onboarding = {dismissed:false, team:false};
+  DB.onboarding.dismissed = true; onboardingTouch(); renderCurrent();
+}
+function onboardingMarkTeam(){
+  if (!DB.onboarding) DB.onboarding = {dismissed:false, team:false};
+  DB.onboarding.team = true; onboardingTouch(); renderCurrent();
+}
+
 /* ---------------- Ikon navigasi (SVG garis tipis, seragam) ---------------- */
 const NAV_ICONS = {
+  excel:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/>',
+  versi:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
   dashboard:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
   setup:'<path d="M6 22V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v18"/><path d="M6 12H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h2"/><path d="M18 9h2a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-2"/><path d="M10 6h4M10 10h4M10 14h4M10 18h4"/>',
   coa:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
