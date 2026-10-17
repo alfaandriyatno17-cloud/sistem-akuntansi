@@ -574,6 +574,15 @@
   .onb-act{flex:none; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
   @media (max-width:640px){ .onb-step{flex-wrap:wrap;} .onb-act{width:100%; justify-content:flex-start; padding-left:38px;} }
   td .pill{white-space:nowrap;}
+  @media (max-width:640px){
+    table.stack-mobile thead{display:none;}
+    table.stack-mobile, table.stack-mobile tbody{display:block; width:100%;}
+    table.stack-mobile tr{display:block; border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px; background:#fff;}
+    table.stack-mobile td{display:block; padding:3px 0; border:0; text-align:left; white-space:normal;}
+    table.stack-mobile td[data-label]::before{content:attr(data-label); display:block; font-size:11px; color:var(--ink-soft); margin-bottom:1px;}
+    table.stack-mobile td.center{padding-top:8px;}
+    table.stack-mobile tr.empty-row td{text-align:center;}
+  }
   .filters{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;}
   .filters .field{margin:0; min-width:150px; flex:1 1 150px; max-width:240px;}
   .filters .field input,.filters .field select{width:100%;}
@@ -799,6 +808,7 @@ function triggerImportBackup(){
 function handleImportBackup(input){
   const file = input.files && input.files[0];
   if (!file) return;
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat memuat cadangan, karena data yang sedang berjalan akan diganti seluruhnya.'); input.value=''; return; }
   const reader = new FileReader();
   reader.onload = (e) => {
     let payload;
@@ -809,11 +819,14 @@ function handleImportBackup(input){
       alert('File tidak dikenali sebagai cadangan aplikasi ini (struktur data tidak cocok).');
       input.value=''; return;
     }
+    if (wouldChangeLockedPeriod(data.journal, data.coa)){ alert(LOCK_BLOCK_MSG); input.value=''; return; }
     if (!confirm('Memuat cadangan ini akan MENGGANTI seluruh data yang sedang berjalan sekarang. Lanjutkan?')){
       input.value=''; return;
     }
+    const keepLockImp = DB.lockedUntil || '';
     BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = data[k]; });
     if (data.lockedUntil === undefined) DB.lockedUntil = '';
+    if (keepLockImp > (DB.lockedUntil || '')) DB.lockedUntil = keepLockImp;   // memuat cadangan tidak boleh membuka kunci periode
     if (data.onboarding === undefined) DB.onboarding = {dismissed:true, team:false};
     if (data.taxSettings === undefined) DB.taxSettings = {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false};
     unsavedChangeCount = 0;
@@ -1021,12 +1034,29 @@ function snapshotForUndo(label){
   undoLabel = label;
   redoSnapshot = null; redoLabel = ''; // aksi baru membatalkan riwayat "Ulangi"
 }
+
+/* ---- Pengaman kunci periode untuk operasi yang mengganti data sekaligus (Urungkan, Ulangi, Pulihkan Versi, Muat Cadangan) ---- */
+function lockSig(journals, coa){
+  if (!DB.lockedUntil) return '';
+  const j = (journals||[]).filter(x => x.date && String(x.date).slice(0,7) <= DB.lockedUntil)
+    .map(x => x.id + '|' + JSON.stringify([x.date, x.ref, x.desc, x.lines, x.deleted ? 1 : 0, x.status])).sort().join('\n');
+  const c = (coa||[]).filter(a => a.initial).map(a => a.code + ':' + a.initial).sort().join(',');   // hanya akun bersaldo awal yang memengaruhi saldo
+  return j + '##' + c;
+}
+function wouldChangeLockedPeriod(journals, coa){
+  return !!DB.lockedUntil && lockSig(DB.journal, DB.coa) !== lockSig(journals, coa);
+}
+const LOCK_BLOCK_MSG = 'Tindakan ini akan mengubah transaksi atau saldo awal pada periode yang sudah dikunci. Owner perlu membuka kunci periode dulu di Pengaturan Sistem.';
 function undoLastAction(){
   if (!undoSnapshot) return;
+  if (/Kunci Periode/.test(undoLabel) && !isOwner()){ alert('Hanya Owner yang dapat mengurungkan pengaturan kunci periode.'); return; }
+  if (wouldChangeLockedPeriod(undoSnapshot.journal, undoSnapshot.coa)){ alert(LOCK_BLOCK_MSG); return; }
   if (!confirm('Urungkan aksi terakhir ("' + undoLabel + '")? Perubahan sesudahnya (jika ada) tidak ikut dibatalkan.')) return;
   const currentSnap = {};
   BACKUP_KEYS.forEach(k => { currentSnap[k] = JSON.parse(JSON.stringify(DB[k])); });
+  const keepLock = DB.lockedUntil;
   BACKUP_KEYS.forEach(k => { DB[k] = undoSnapshot[k]; });
+  if (!/Kunci Periode/.test(undoLabel)) DB.lockedUntil = keepLock;   // kunci hanya berubah lewat aksi kunci itu sendiri
   redoSnapshot = currentSnap; redoLabel = undoLabel;
   logAuditSilent('Undo', 'Urungkan Aksi', undoLabel);
   undoSnapshot = null; undoLabel = '';
@@ -1034,10 +1064,14 @@ function undoLastAction(){
 }
 function redoLastAction(){
   if (!redoSnapshot) return;
+  if (/Kunci Periode/.test(redoLabel) && !isOwner()){ alert('Hanya Owner yang dapat mengulangi pengaturan kunci periode.'); return; }
+  if (wouldChangeLockedPeriod(redoSnapshot.journal, redoSnapshot.coa)){ alert(LOCK_BLOCK_MSG); return; }
   if (!confirm('Ulangi lagi aksi yang baru saja diurungkan ("' + redoLabel + '")?')) return;
   const currentSnap = {};
   BACKUP_KEYS.forEach(k => { currentSnap[k] = JSON.parse(JSON.stringify(DB[k])); });
+  const keepLock2 = DB.lockedUntil;
   BACKUP_KEYS.forEach(k => { DB[k] = redoSnapshot[k]; });
+  if (!/Kunci Periode/.test(redoLabel)) DB.lockedUntil = keepLock2;
   undoSnapshot = currentSnap; undoLabel = redoLabel;
   logAuditSilent('Redo', 'Ulangi Aksi', redoLabel);
   redoSnapshot = null; redoLabel = '';
@@ -1082,13 +1116,17 @@ function fmtDate(iso){
   const bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   return d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
 }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ---------------- Export CSV (buka langsung di Excel) ---------------- */
 function downloadCSV(filename, rows){
   const csv = rows.map(r => r.map(cell => {
     let s = (cell===null||cell===undefined) ? '' : String(cell);
+    if (typeof cell === 'string' && /^[=+\-@\t\r]/.test(s) && !/^-?\d+([.,]\d+)?$/.test(s)) s = "'" + s;
     if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g,'""') + '"';
     return s;
   }).join(',')).join('\r\n');
@@ -1190,6 +1228,14 @@ function rejectJournal(id){
 }
 
 /* ---------------- Inventory helpers (weighted average cost) ---------------- */
+/* Apakah stok tetap >= 0 di setiap titik waktu bila mutasi tambahan ini dimasukkan? (menangkap transaksi bertanggal mundur dan baris produk ganda) */
+function stockTimelineOk(code, extra){
+  const moves = DB.stockMoves.filter(m => m.code === code).concat(extra || [])
+    .slice().sort((a,b)=> (a.date + String(a.id)).localeCompare(b.date + String(b.id)));
+  let q = 0;
+  for (const m of moves){ q += (m.type === 'in' ? 1 : -1) * m.qty; if (q < -0.001) return false; }
+  return true;
+}
 function inventoryState(code){
   // walk stock moves chronologically, compute qty & avg cost
   const moves = DB.stockMoves.filter(m => m.code === code).slice().sort((a,b)=> (a.date+a.id).localeCompare(b.date+b.id));
@@ -1528,7 +1574,9 @@ function accountBalanceAsOf(acc, asOfDate){
 function cumulativeLabaAsOf(asOfDate){
   // Laba/rugi kumulatif SEJAK AWAL PEMBUKUAN (bukan cuma tahun terpilih) — dipakai agar Neraca
   // tetap seimbang lintas tahun meski tidak ada jurnal penutup formal di akhir tahun.
-  const start = DB.company.fiscalStart || '2000-01-01';
+  // Dihitung dari SEMUA jurnal sampai tanggal itu (bukan mulai tanggal awal fiskal di Setup). Kalau dibatasi mulai tanggal awal fiskal,
+  // jurnal yang bertanggal sebelumnya (mis. hasil impor data tahun lalu) tetap masuk saldo akun tetapi tidak masuk laba, sehingga Neraca tidak seimbang.
+  const start = '0000-01-01';
   const pendapatan = DB.coa.filter(a=>a.category==='Pendapatan').reduce((s,a)=>s+accountFlowInRange(a, start, asOfDate),0);
   const beban = DB.coa.filter(a=>a.category==='Beban').reduce((s,a)=>s+accountFlowInRange(a, start, asOfDate),0);
   return pendapatan - beban;
@@ -2271,6 +2319,10 @@ function saveCoa(editingCode){
   const isCash = document.getElementById('m_iscash').checked;
   if (!code || !name){ alert('Kode dan nama akun wajib diisi.'); return; }
   if (!editingCode && coaByCode(code)){ alert('Kode akun sudah digunakan.'); return; }
+  if (DB.lockedUntil){
+    const was = editingCode ? ((coaByCode(editingCode)||{}).initial || 0) : 0;
+    if (Math.abs(was - initial) > 0.0001){ alert('Saldo awal tidak bisa diubah selama ada periode yang terkunci (sampai akhir ' + monthLabel(DB.lockedUntil) + '), karena akan mengubah saldo periode itu. Owner dapat membuka kunci dulu di Pengaturan Sistem.'); return; }
+  }
   snapshotForUndo('Ubah Kode Akun');
   if (editingCode){
     const a = coaByCode(editingCode);
@@ -2382,8 +2434,8 @@ function jeAddLine(){ jeDraft.push({account:'', debit:0, kredit:0}); jeRenderLin
 function jeRemoveLine(i){ if (jeDraft.length<=2) return; jeDraft.splice(i,1); jeRenderLines(); }
 function jeUpdateLine(i, field, val){
   if (field==='account') jeDraft[i].account = val;
-  else if (field==='debit'){ jeDraft[i].debit = parseNum(val); if (jeDraft[i].debit) jeDraft[i].kredit = 0; }
-  else if (field==='kredit'){ jeDraft[i].kredit = parseNum(val); if (jeDraft[i].kredit) jeDraft[i].debit = 0; }
+  else if (field==='debit'){ jeDraft[i].debit = Math.max(0, parseNum(val)); if (jeDraft[i].debit) jeDraft[i].kredit = 0; }
+  else if (field==='kredit'){ jeDraft[i].kredit = Math.max(0, parseNum(val)); if (jeDraft[i].kredit) jeDraft[i].debit = 0; }
   jeRenderBalanceOnly();
 }
 function acctOptions(selected){
@@ -2435,7 +2487,7 @@ function viewJournal(id){
   const j = DB.journal.find(x=>x.id===id);
   if (!j) return;
   const t = journalTotals(j);
-  const rows = j.lines.map(l => `<tr><td>${coaLabel(l.account)}</td><td class="num">${l.debit?fmtRp(l.debit):''}</td><td class="num">${l.kredit?fmtRp(l.kredit):''}</td></tr>`).join('');
+  const rows = j.lines.map(l => `<tr><td>${esc(coaLabel(l.account))}</td><td class="num">${l.debit?fmtRp(l.debit):''}</td><td class="num">${l.kredit?fmtRp(l.kredit):''}</td></tr>`).join('');
   const body = `
     <div class="row">
       <div class="field"><label>Tanggal</label><div>${fmtDate(j.date)}</div></div>
@@ -2837,14 +2889,30 @@ function lastDayOfMonthISO(monthKey){
 /* Posting otomatis: setiap kali aplikasi dimuat / data berubah, seluruh bulan yang
    sudah "lewat akhir bulannya" (dibandingkan tanggal hari ini) langsung diposting
    ke jurnal tanpa perlu tombol posting manual. */
+/* Semua bulan penyusutan yang sudah jatuh tempo untuk satu aset: dari bulan pembelian sampai bulan berjalan (maksimal umur manfaat),
+   tidak peduli tahun yang sedang dilihat di selector tahun. */
+function depMonthKeysDue(fa, today){
+  const total = Math.round(parseNum(fa.life) * 12);
+  if (!(total > 0)) return [];
+  const [y, m] = depStartMonth(fa).split('-').map(Number);
+  const curMk = today.slice(0, 7), keys = [];
+  for (let i = 0; i < total; i++){
+    const d = new Date(Date.UTC(y, m - 1 + i, 1));
+    const mk = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0');
+    if (mk > curMk) break;
+    keys.push(mk);
+  }
+  return keys;
+}
 function autoPostDueDepreciation(){
   const today = todayISO();
   let changed = false;
   DB.fixedAssets.forEach(fa => {
     fa.posted = fa.posted || {};
     if (!fa.expenseAccount || !fa.accumAccount) return;
-    assetFiscalMonths().forEach(mk => {
+    depMonthKeysDue(fa, today).forEach(mk => {
       if (fa.posted[mk]) return;
+      if (isYearClosed(parseInt(mk.slice(0,4), 10))) return;   // tahun yang sudah ditutup tidak diubah diam-diam
       const amt = monthlyDepFor(fa, mk);
       if (amt <= 0) return;
       const monthEnd = lastDayOfMonthISO(mk);
@@ -3142,9 +3210,11 @@ function saveStockMove(code, type){
   let price = 0;
   if (type==='in'){
     price = parseNum(document.getElementById('sm_price').value);
+    if (price < 0){ alert('Harga tidak boleh negatif.'); return; }
   } else {
     const st = inventoryState(code);
     if (qty > st.qty + 0.001){ alert('Stok tidak mencukupi. Stok tersedia: ' + st.qty); return; }
+    if (!stockTimelineOk(code, [{id:'zzz', date, code, type:'out', qty}])){ alert('Stok belum cukup pada tanggal ' + fmtDate(date) + ' (ada barang yang baru masuk setelah tanggal itu). Gunakan tanggal yang lebih akhir.'); return; }
     price = st.avgCost;
   }
   if (!confirmFiscalDate(date)) return;
@@ -3284,7 +3354,7 @@ function ivRenderLines(){
 }
 function ivComputeTotals(){
   let subtotal=0, disc=0;
-  invDraft.forEach(l => { const lt = l.qty*l.price; subtotal += lt; disc += lt*(l.discPct||0)/100; });
+  invDraft.filter(l => l.code && l.qty > 0).forEach(l => { const lt = l.qty*l.price; subtotal += lt; disc += lt*(l.discPct||0)/100; });
   const dpp = subtotal - disc;
   const ppnChecked = document.getElementById('iv_ppn') ? document.getElementById('iv_ppn').checked : false;
   const ppn = ppnChecked ? Math.round(dpp * ppnFrac()) : 0;
@@ -3325,10 +3395,18 @@ function saveInvoice(){
   if (ppnChecked && !ppnAcc){ alert('Pilih akun PPN Keluaran atau nonaktifkan PPN.'); return; }
   const anyCogs = hppAcc && persAcc;
 
-  for (const l of items){
-    const st = inventoryState(l.code);
-    if (l.qty > st.qty + 0.001){
-      alert('Stok "' + (invByCode(l.code)||{}).name + '" tidak mencukupi. Tersedia: ' + st.qty);
+  if (items.some(l => l.price < 0 || (l.discPct||0) < 0 || (l.discPct||0) > 100)){ alert('Harga tidak boleh negatif dan diskon harus antara 0 dan 100 persen.'); return; }
+  if (ivComputeTotals().grand <= 0){ alert('Total invoice harus lebih dari nol.'); return; }
+  const need = {};
+  items.forEach(l => { need[l.code] = (need[l.code] || 0) + l.qty; });   // produk yang sama di beberapa baris dijumlahkan dulu
+  for (const code of Object.keys(need)){
+    const st = inventoryState(code);
+    if (need[code] > st.qty + 0.001){
+      alert('Stok "' + (invByCode(code)||{}).name + '" tidak mencukupi. Tersedia: ' + st.qty + ', dibutuhkan: ' + need[code]);
+      return;
+    }
+    if (!stockTimelineOk(code, [{id:'zzz', date, code, type:'out', qty: need[code]}])){
+      alert('Stok "' + (invByCode(code)||{}).name + '" belum cukup pada tanggal ' + fmtDate(date) + '. Ada barang yang baru masuk setelah tanggal itu. Gunakan tanggal yang lebih akhir.');
       return;
     }
   }
@@ -3869,6 +3947,7 @@ function savePembelian(){
   const desc = document.getElementById('pb_desc').value.trim();
   const branch = branchFromField('pb_branch');
   const sub = pbSubtotal();
+  if (pbType==='barang' && (parseNum(document.getElementById('pb_qty').value) <= 0 || parseNum(document.getElementById('pb_price').value) < 0)){ alert('Jumlah harus lebih dari nol dan harga tidak boleh negatif.'); return; }
   if (!creditAcc){ alert('Pilih akun kredit (kas/bank atau utang dagang).'); return; }
   if (sub <= 0){ alert('Jumlah pembelian harus lebih dari nol.'); return; }
   if (ppnOn && !ppnAcc){ alert('Pilih akun PPN Masukan atau nonaktifkan PPN.'); return; }
@@ -5302,7 +5381,7 @@ function periodLockBanner(){
 }
 function periodLockHtml(){
   const cur = DB.lockedUntil;
-  const d = new Date(); d.setMonth(d.getMonth()-1);
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth()-1);
   const suggest = cur || (d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'));
   return `<div class="section">
     <div class="section-head"><div><h2>Kunci Periode</h2><div class="hint">Setelah sebuah bulan selesai diperiksa dan laporannya final, kunci agar tidak ada yang bisa menambah, mengubah, atau menghapus transaksi di dalamnya</div></div></div>
@@ -5367,17 +5446,17 @@ function auditTableHtml(){
   const body = rows.length ? rows.map(l => {
     const t = tsLocal(l.ts);
     return `<tr>
-      <td class="tag-small">${fmtDate(t.date)} ${t.time}</td>
-      <td>${esc(l.actor)}</td>
-      <td><span class="pill pill-aset">${esc(l.action)}</span></td>
-      <td>${esc(l.target)}</td>
-      <td class="muted">${esc(l.detail)}</td>
+      <td class="tag-small" data-label="Waktu">${fmtDate(t.date)} ${t.time}</td>
+      <td data-label="Pengguna">${esc(l.actor)}</td>
+      <td data-label="Aksi"><span class="pill pill-aset">${esc(l.action)}</span></td>
+      <td data-label="Objek">${esc(l.target)}</td>
+      <td class="muted" data-label="Detail">${esc(l.detail)}</td>
     </tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="5">${DB.auditLog.length ? 'Tidak ada aktivitas yang cocok dengan filter.' : 'Belum ada aktivitas tercatat.'}</td></tr>`;
   const more = all.length > rows.length
     ? `<div style="padding:12px 0 0; text-align:center;"><button class="btn btn-outline btn-sm" onclick="auditMore()">Tampilkan lebih banyak (${all.length - rows.length} lagi)</button></div>` : '';
   return `<div class="hint" style="margin-bottom:8px;">${all.length} aktivitas${all.length!==DB.auditLog.length ? ' (dari '+DB.auditLog.length+' total)' : ''}</div>
-    <div class="scrollx"><table>
+    <div class="scrollx"><table class="stack-mobile">
       <thead><tr><th>Waktu</th><th>Pengguna</th><th>Aksi</th><th>Objek</th><th>Detail</th></tr></thead>
       <tbody>${body}</tbody></table></div>${more}`;
 }
@@ -5646,7 +5725,14 @@ function buildImportPlan(XL, wb){
       if (incoming.has(code)) plan.problems.push('Kode Akun baris ' + line + ': kode ' + code + ' muncul lebih dari sekali, baris terakhir dipakai');
       incoming.set(code, rec);
     });
-    incoming.forEach(rec => (coaByCode(rec.code) ? plan.coa.upd : plan.coa.add).push(rec));
+    incoming.forEach(rec => {
+      const ex = coaByCode(rec.code);
+      if (DB.lockedUntil && rec.initial !== undefined && Math.abs((ex ? (ex.initial||0) : 0) - rec.initial) > 0.0001){
+        plan.problems.push('Kode Akun ' + rec.code + ': saldo awal tidak diubah karena periode terkunci (sampai ' + monthLabel(DB.lockedUntil) + ')');
+        if (ex) delete rec.initial; else rec.initial = 0;
+      }
+      (ex ? plan.coa.upd : plan.coa.add).push(rec);
+    });
   }
   if (jrnRows){
     plan.sheets.push(jrnRows.name);
@@ -5847,11 +5933,11 @@ function versiRender(){
   const rows = (versiRows || []).map(r => {
     const s = r.summary || {};
     return `<tr>
-      <td class="tag-small">${esc(versiFmtWhen(r.created_at))}</td>
-      <td><span class="pill ${r.kind==='manual'?'pill-modal':r.kind==='auto'?'pill-aset':'pill-warn'}">${esc(VERSI_KIND[r.kind]||r.kind)}</span></td>
-      <td>${esc(r.label)}<div class="hint">${esc(r.created_by||'')}</div></td>
-      <td class="tag-small">${s.akun||0} akun &middot; ${s.jurnal||0} jurnal &middot; ${s.invoice||0} invoice</td>
-      <td class="tag-small">${versiFmtSize(r.size_bytes||0)}</td>
+      <td class="tag-small" data-label="Waktu">${esc(versiFmtWhen(r.created_at))}</td>
+      <td data-label="Jenis"><span class="pill ${r.kind==='manual'?'pill-modal':r.kind==='auto'?'pill-aset':'pill-warn'}">${esc(VERSI_KIND[r.kind]||r.kind)}</span></td>
+      <td data-label="Keterangan">${esc(r.label)}<div class="hint">${esc(r.created_by||'')}</div></td>
+      <td class="tag-small" data-label="Isi">${s.akun||0} akun &middot; ${s.jurnal||0} jurnal &middot; ${s.invoice||0} invoice</td>
+      <td class="tag-small" data-label="Ukuran">${versiFmtSize(r.size_bytes||0)}</td>
       <td class="center" style="white-space:nowrap;">
         <button class="btn btn-primary btn-sm" onclick="versiRestore('${r.id}')">Pulihkan</button>
         <button class="btn btn-outline btn-sm" onclick="versiDownload('${r.id}')">Unduh</button>
@@ -5860,7 +5946,7 @@ function versiRender(){
     </tr>`;
   }).join('') || `<tr class="empty-row"><td colspan="6">Belum ada versi tersimpan. Cadangan otomatis dibuat setiap hari saat ada perubahan, atau simpan versi sekarang.</td></tr>`;
   el.innerHTML = (versiErr ? `<div class="balance-check bad" style="margin-bottom:12px;">${esc(versiErr)}</div>` : '') +
-    `<div class="scrollx"><table>
+    `<div class="scrollx"><table class="stack-mobile">
       <thead><tr><th>Waktu</th><th>Jenis</th><th>Keterangan</th><th>Isi</th><th>Ukuran</th><th class="center">Aksi</th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
 }
@@ -5905,6 +5991,7 @@ async function versiRestore(id){
   if (!confirm('Pulihkan data perusahaan ke versi ' + when + '?\n\nData saat ini akan diganti. Kondisi saat ini disimpan dulu sebagai versi "Sebelum pemulihan" sehingga bisa dikembalikan lagi.')) return;
   try {
     const data = await versiFetchData(id);
+    if (wouldChangeLockedPeriod(data.journal, data.coa)){ alert(LOCK_BLOCK_MSG); return; }
     await versiInsert('pre_restore', 'Sebelum memulihkan versi ' + when, versiSnapshotNow());
     snapshotForUndo('Pulihkan Versi');
     const keepLock = DB.lockedUntil || '', keepAudit = DB.auditLog;
