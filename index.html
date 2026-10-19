@@ -1188,6 +1188,16 @@ function journalTotals(j){
 
 function addJournalEntry({date, ref, desc, branch, note, lines, source}){
   if (isPeriodLocked(date || todayISO())) throw new Error(periodLockMsg(date || todayISO()));
+  {
+    let td = 0, tk = 0;
+    (lines || []).forEach(l => {
+      const dd = parseNum(l.debit), kk = parseNum(l.kredit);
+      if (!(dd >= 0) || !(kk >= 0)) throw new Error('Jurnal berisi nilai negatif atau tidak valid.');
+      if (!coaByCode(l.account)) throw new Error('Akun "' + l.account + '" tidak ditemukan pada Kode Akun.');
+      td += dd; tk += kk;
+    });
+    if (!lines || lines.length < 2 || Math.abs(td - tk) > 0.01) throw new Error('Jurnal tidak seimbang (debit ' + td + ' ≠ kredit ' + tk + ').');
+  }
   DB.counters.journal += 1;
   const staffCreated = isStaff();
   const entry = {
@@ -2171,6 +2181,7 @@ create policy "allow anon update" on app_state for update using (true);</textare
 }
 function savePengaturanFiscal(){
   if (!isOwner()) return;
+  if (DB.closedYears.length){ alert('Awal tahun fiskal tidak bisa diubah setelah ada tahun yang ditutup.'); return; }
   snapshotForUndo('Ubah Tahun Fiskal Perusahaan');
   const val = document.getElementById('pg_fiscal').value;
   if (val) DB.company.fiscalStart = val;
@@ -2323,6 +2334,14 @@ function saveCoa(editingCode){
     const was = editingCode ? ((coaByCode(editingCode)||{}).initial || 0) : 0;
     if (Math.abs(was - initial) > 0.0001){ alert('Saldo awal tidak bisa diubah selama ada periode yang terkunci (sampai akhir ' + monthLabel(DB.lockedUntil) + '), karena akan mengubah saldo periode itu. Owner dapat membuka kunci dulu di Pengaturan Sistem.'); return; }
   }
+  if (editingCode){
+    const cur = coaByCode(editingCode) || {};
+    const structural = cur.category !== category || !!cur.contra !== contra;
+    const inJournal = DB.journal.some(j => j.lines.some(l => l.account === editingCode));
+    if (structural && DB.lockedUntil && inJournal){ alert('Kategori atau status akun lawan tidak bisa diubah pada akun yang sudah dipakai jurnal selama ada periode terkunci, karena laporan periode itu akan berubah. Owner dapat membuka kunci dulu.'); return; }
+    if (structural && DB.closedYears.length && inJournal){ alert('Kategori atau status akun lawan tidak bisa diubah pada akun yang sudah dipakai jurnal setelah ada tahun fiskal yang ditutup.'); return; }
+    if (structural && inJournal && !confirm('Akun ini sudah dipakai pada jurnal. Mengubah kategori akan mengubah seluruh laporan, termasuk periode lalu. Lanjutkan?')) return;
+  }
   snapshotForUndo('Ubah Kode Akun');
   if (editingCode){
     const a = coaByCode(editingCode);
@@ -2338,6 +2357,9 @@ function saveCoa(editingCode){
 function deleteCoa(code){
   const used = DB.journal.some(j => j.lines.some(l => l.account === code));
   if (used){ alert('Akun ini sudah dipakai pada jurnal dan tidak dapat dihapus.'); return; }
+  const ts = DB.taxSettings || {};
+  const usedCfg = DB.fixedAssets.some(f => [f.assetAccount, f.accumAccount, f.expenseAccount].includes(code)) || ts.ppnKeluaranAcc === code || ts.ppnMasukanAcc === code;
+  if (usedCfg){ alert('Akun ini dipakai oleh aset tetap atau pengaturan pajak. Ubah pengaturan tersebut dulu sebelum menghapus akun.'); return; }
   if (!confirm('Hapus akun ' + code + '?')) return;
   snapshotForUndo('Hapus Kode Akun');
   const a = coaByCode(code);
@@ -2474,7 +2496,7 @@ function saveJournal(){
   const lines = jeDraft.filter(l => l.account && (l.debit || l.kredit));
   const d = lines.reduce((s,l)=>s+parseNum(l.debit),0);
   const k = lines.reduce((s,l)=>s+parseNum(l.kredit),0);
-  if (lines.length < 2 || Math.abs(d-k) > 0.5 || d===0){ alert('Jurnal belum seimbang atau baris belum lengkap.'); return; }
+  if (lines.length < 2 || Math.abs(d-k) > 0.01 || d===0){ alert('Jurnal belum seimbang atau baris belum lengkap.'); return; }
   if (!desc){ alert('Keterangan wajib diisi.'); return; }
   if (!confirmFiscalDate(date)) return;
   const branch = branchFromField('je_branch');
@@ -3053,6 +3075,18 @@ function saveAsset(id){
   if (!data.code || !data.name || !data.assetAccount || !data.accumAccount || !data.expenseAccount){
     alert('Lengkapi kode, nama aset, dan ketiga akun terkait.'); return;
   }
+  if (DB.fixedAssets.some(x => x.code === data.code && x.id !== id)){ alert('Kode aset sudah digunakan.'); return; }
+  if (!data.purchaseDate){ alert('Tanggal perolehan wajib diisi.'); return; }
+  if (!(data.cost > 0)){ alert('Harga perolehan harus lebih dari nol.'); return; }
+  if (data.residual < 0 || data.residual >= data.cost){ alert('Nilai residu tidak boleh negatif dan harus lebih kecil dari harga perolehan.'); return; }
+  if (!(data.life > 0)){ alert('Umur manfaat harus lebih dari nol.'); return; }
+  if (data.method === 'saldo-menurun' && data.decliningRate !== '' && !(data.decliningRate > 0 && data.decliningRate <= 100)){ alert('Tarif saldo menurun harus antara 0 dan 100 persen.'); return; }
+  if (id){
+    const old = DB.fixedAssets.find(x => x.id === id);
+    const nPosted = old && old.posted ? Object.keys(old.posted).length : 0;
+    const changed = old && ['purchaseDate','cost','residual','life','method','decliningRate'].some(k => String(old[k]) !== String(data[k]));
+    if (nPosted > 0 && changed && !confirm('Aset ini sudah punya ' + nPosted + ' jurnal penyusutan. Jurnal yang sudah diposting TIDAK dihitung ulang; hanya bulan berikutnya yang memakai nilai baru. Lanjutkan?')) return;
+  }
   snapshotForUndo('Ubah Aset Tetap');
   if (id){
     const fa = DB.fixedAssets.find(x=>x.id===id);
@@ -3164,6 +3198,7 @@ function saveItem(editingCode){
   const price = parseNum(document.getElementById('im_price').value);
   if (!code || !name){ alert('Kode dan nama produk wajib diisi.'); return; }
   if (!editingCode && invByCode(code)){ alert('Kode produk sudah digunakan.'); return; }
+  if (price < 0){ alert('Harga jual tidak boleh negatif.'); return; }
   snapshotForUndo('Ubah Produk');
   if (editingCode){
     const it = invByCode(editingCode);
