@@ -5088,16 +5088,29 @@ function renderAuth(view, msg, kind){
     const roleLabel = {owner:'Owner', admin:'Admin', staff:'Staff', user:'User'};
     const list = authCompanies.map(c => `<button class="auth-co" onclick="authChooseCompany('${esc(c.id)}')"><span><b>${esc(c.name)}</b><small>Peran: ${roleLabel[c.role]||c.role}</small></span><span class="arr">&rarr;</span></button>`).join('')
       || `<div class="auth-sub" style="margin-top:-4px;">Kamu belum punya perusahaan. Buat perusahaan baru di bawah, atau minta pemilik perusahaan menambahkan email kamu sebagai anggota.</div>`;
-    const canCreate = true;
+    const canCreate = isSysOwner() || authOwnedCount < 1;
+    const pendingReq = authMyReqs.find(r => r.status === 'pending');
+    const lastDone = authMyReqs.filter(r => r.status !== 'pending').slice(0, 2);
+    const doneHtml = lastDone.map(r => `<div class="auth-sub" style="margin:6px 0 0; font-size:12.5px;">${r.status === 'approved' ? '&#10003; Disetujui' : '&#10007; Ditolak'}: <b>${esc(r.company_name)}</b>${r.decision_note ? ' &mdash; ' + esc(r.decision_note) : ''}</div>`).join('');
     const create = canCreate ? `<hr class="auth-hr"><div class="auth-sec">Buat Perusahaan Baru</div>
-      <form onsubmit="authCreateCompany(event)"><div class="field"><input id="au_coname" type="text" placeholder="Nama perusahaan/toko" required></div>
-      <button class="btn btn-primary" type="submit" id="au_btn">+ Buat Perusahaan</button></form>` : '';
+      <form onsubmit="authCreateCompany(event)"><div class="field"><input id="au_coname" type="text" placeholder="Nama perusahaan/toko" required maxlength="120"></div>
+      <button class="btn btn-primary" type="submit" id="au_btn">+ Buat Perusahaan</button></form>
+      ${isSysOwner() ? '' : '<div class="auth-sub" style="margin:8px 0 0; font-size:12.5px;">Setiap akun dapat membuat 1 perusahaan. Penambahan perusahaan berikutnya perlu diajukan ke pemilik sistem.</div>'}`
+      : (pendingReq
+        ? `<hr class="auth-hr"><div class="auth-sec">Pengajuan Perusahaan Tambahan</div>
+           <div class="balance-check" style="margin:0;">&#8987; Pengajuan <b>${esc(pendingReq.company_name)}</b> sedang menunggu keputusan pemilik sistem.</div>${doneHtml}`
+        : `<hr class="auth-hr"><div class="auth-sec">Ajukan Perusahaan Tambahan</div>
+           <div class="auth-sub" style="margin:0 0 8px; font-size:12.5px;">Akun ini sudah memiliki 1 perusahaan. Perusahaan tambahan dibuat setelah disetujui pemilik sistem.</div>
+           <form onsubmit="authRequestCompany(event)"><div class="field"><input id="au_coname" type="text" placeholder="Nama perusahaan/toko yang diajukan" required maxlength="120"></div>
+           <div class="field"><input id="au_coreason" type="text" placeholder="Alasan (opsional)" maxlength="500"></div>
+           <button class="btn btn-primary" type="submit" id="au_btn">Ajukan Perusahaan</button></form>${doneHtml}`);
     html = authShell(`<h2>Pilih Perusahaan</h2><div class="auth-sub">Satu akun bisa mengakses beberapa perusahaan/toko</div>${m}${list}${create}
       <div class="auth-center"><a onclick="authLogout()" style="cursor:pointer;">Keluar dari akun</a>
-      ${isSysOwner() ? `<div><a class="auth-amber" id="au_manage_link" onclick="authOpenManage()">Kelola Pengguna${authPendingCount ? ' (' + authPendingCount + ' menunggu)' : ''}</a></div>` : ''}</div>`);
+      ${isSysOwner() ? `<div><a class="auth-amber" id="au_manage_link" onclick="authOpenManage()">Kelola Pengguna${authTotalPending() ? ' (' + authTotalPending() + ' menunggu)' : ''}</a></div>` : ''}</div>`);
   } else if (view === 'manage'){
     html = authShell(`<h2>Kelola Pengguna</h2><div class="auth-sub">Kontrol siapa yang boleh mendaftar dan memakai aplikasi. Data tiap perusahaan terpisah &mdash; pemilik sistem pun tidak dapat melihat data perusahaan milik orang lain.</div>${m}
       <div class="auth-mgmt" style="overflow-x:auto;">${authManageHtml()}</div>
+      ${authReqHtml()}
       <div class="auth-center"><a class="auth-amber" onclick="authShowCompanies()">&larr; Kembali ke Pilih Perusahaan</a></div>`, true);
   } else {
     html = authShell(`<div style="text-align:center;color:#6B7280;padding:20px 0;">${esc(msg||'Memuat…')}</div>`);
@@ -5191,7 +5204,7 @@ async function authLogout(everywhere){
   if (everywhere && !confirm('Keluar dari SEMUA device? Anda juga akan keluar dari perangkat ini dan harus masuk lagi.')) return;
   await authFlush();
   try { if (authSession) await authCall('/logout?scope=' + (everywhere ? 'global' : 'local'), 'POST', null, authSession.access_token); } catch(e){}
-  authSession = null; authProfile = null; authCompany = null; authPendingCount = 0; authPendingSeen = null; authSaveSession();
+  authSession = null; authProfile = null; authCompany = null; authPendingCount = 0; authPendingSeen = null; authReqPending = 0; authReqSeen = null; authOwnedCount = 0; authMyReqs = []; authReqList = []; authSaveSession();
   if (authPollTimer){ clearInterval(authPollTimer); authPollTimer = null; }
   renderAuth('login');
 }
@@ -5215,12 +5228,20 @@ function blankCompanyData(name){
   supaVersion = null;
 }
 let authCompanies = [];
+let authOwnedCount = 0, authMyReqs = [], authReqPending = 0, authReqList = [];
+function authTotalPending(){ return (authPendingCount || 0) + (authReqPending || 0); }
 async function authShowCompanies(msg, kind){
   renderAuth('loading', 'Memuat perusahaan…');
   try {
     const rows = await authRest('akt_members?select=role,company:akt_companies(id,name)&user_id=eq.' + encodeURIComponent(authSession.user.id));
     authCompanies = (rows||[]).filter(r=>r.company).map(r => ({id:r.company.id, name:r.company.name, role:r.role}));
   } catch(e){ authCompanies = []; msg = 'Gagal memuat perusahaan: ' + e.message; kind = 'err'; }
+  try {
+    const own = await authRest('akt_companies?select=id&created_by=eq.' + encodeURIComponent(authSession.user.id));
+    authOwnedCount = (own||[]).length;
+    const rq = await authRest('rpc/akt_list_company_requests', 'POST', {});
+    authMyReqs = (rq||[]).filter(r => r.user_id === authSession.user.id);
+  } catch(e){ authOwnedCount = 0; authMyReqs = []; }
   if (isSysOwner()) authPollPending();
   renderAuth('companies', msg, kind);
 }
@@ -5267,8 +5288,20 @@ async function authCreateCompany(ev){
     const rec = await authRest('rpc/akt_create_company', 'POST', {p_name: name});
     const c = Array.isArray(rec) ? rec[0] : rec;
     authCompanies.push({id:c.id, name:c.name, role:'owner'});
+    authOwnedCount += 1;
     await authChooseCompany(c.id);
   } catch(e){ authShowCompanies('Gagal membuat perusahaan: ' + e.message, 'err'); }
+}
+async function authRequestCompany(ev){
+  ev.preventDefault();
+  const name = document.getElementById('au_coname').value.trim();
+  const reason = (document.getElementById('au_coreason') || {value:''}).value.trim();
+  if (!name) return;
+  authBusy(true);
+  try {
+    await authRest('rpc/akt_request_company', 'POST', {p_name: name, p_reason: reason});
+    authShowCompanies('Pengajuan terkirim. Pemilik sistem akan meninjaunya.', 'ok');
+  } catch(e){ authShowCompanies('Gagal mengajukan: ' + e.message, 'err'); }
 }
 async function authFlush(){
   if (supaSyncTimer){ clearTimeout(supaSyncTimer); supaSyncTimer = null; }
@@ -5282,12 +5315,13 @@ async function authSwitchCompany(){
 
 /* ---------- Kelola Pengguna (khusus pemilik sistem) ---------- */
 let authPendingCount = 0;
+let authReqSeen = null;
 let authPendingSeen = null;   // jumlah pendaftar menunggu pada pengecekan sebelumnya (null = belum pernah dicek)
 let authPollTimer = null;
 function authPendingBannerHtml(){
-  if (!isSysOwner() || !authPendingCount) return '';
+  if (!isSysOwner() || !authTotalPending()) return '';
   const canAsk = typeof Notification !== 'undefined' && Notification.permission === 'default';
-  return `<div class="balance-check bad" style="margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">&#128276; ${authPendingCount} pendaftar baru menunggu persetujuan Anda &mdash; <a href="#" onclick="authOpenManage(); return false;" style="color:inherit; font-weight:700; text-decoration:underline;">Kelola Pengguna</a>
+  return `<div class="balance-check bad" style="margin-bottom:12px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">&#128276; ${[authPendingCount ? authPendingCount + ' pendaftar baru' : '', authReqPending ? authReqPending + ' pengajuan perusahaan' : ''].filter(Boolean).join(' dan ')} menunggu persetujuan Anda &mdash; <a href="#" onclick="authOpenManage(); return false;" style="color:inherit; font-weight:700; text-decoration:underline;">Kelola Pengguna</a>
     ${canAsk ? '<a href="#" onclick="authAskNotify(); return false;" style="margin-left:auto; color:inherit; opacity:.85; text-decoration:underline;">Aktifkan notifikasi browser</a>' : ''}</div>`;
 }
 async function authPollPending(){
@@ -5295,13 +5329,16 @@ async function authPollPending(){
   try {
     const rows = await authRest('akt_profiles?status=eq.pending&select=id');
     const n = (rows||[]).length;
-    const changed = n !== authPendingCount;
-    const prev = authPendingSeen;
-    authPendingSeen = n;
-    authPendingCount = n; authUpdateTitle();
+    let rn = authReqPending;
+    try { rn = ((await authRest('akt_company_requests?status=eq.pending&select=id')) || []).length; } catch(e){}
+    const changed = n !== authPendingCount || rn !== authReqPending;
+    const prev = authPendingSeen, prevR = authReqSeen;
+    authPendingSeen = n; authReqSeen = rn;
+    authPendingCount = n; authReqPending = rn; authUpdateTitle();
     if (prev !== null && n > prev) authAlertNewRegistrants(n - prev);
+    if (prevR !== null && rn > prevR) authToast(rn === 1 ? 'Ada 1 pengajuan perusahaan tambahan menunggu keputusan. Klik untuk membukanya.' : 'Ada ' + rn + ' pengajuan perusahaan tambahan menunggu keputusan. Klik untuk membukanya.');
     if (changed && authCompany && currentTab === 'dashboard') renderCurrent();
-    if (changed){ const lk = document.getElementById('au_manage_link'); if (lk) lk.textContent = 'Kelola Pengguna' + (n ? ' (' + n + ' menunggu)' : ''); }
+    if (changed){ const lk = document.getElementById('au_manage_link'); if (lk) lk.textContent = 'Kelola Pengguna' + (authTotalPending() ? ' (' + authTotalPending() + ' menunggu)' : ''); }
   } catch(e){}
 }
 function authStartPolling(){
@@ -5354,7 +5391,9 @@ async function authOpenManage(){
   try {
     const users = await authRest('akt_profiles?select=*&order=created_at.asc');
     authMgmt = {users: users||[], comps: [], mems: []};
-    authPendingCount = authMgmt.users.filter(u=>u.status==='pending').length; authUpdateTitle();
+    authPendingCount = authMgmt.users.filter(u=>u.status==='pending').length;
+    try { authReqList = (await authRest('rpc/akt_list_company_requests', 'POST', {})) || []; } catch(e){ authReqList = []; }
+    authReqPending = authReqList.filter(r => r.status === 'pending').length; authUpdateTitle();
   } catch(e){ authShowCompanies('Gagal memuat pengguna: ' + e.message, 'err'); return; }
   renderAuth('manage');
 }
@@ -5377,6 +5416,32 @@ function authManageHtml(){
       <td>${act}${access}</td></tr>`;
   }).join('');
   return `<table><thead><tr><th>Pengguna</th><th>Mendaftar sebagai</th><th>Status</th><th>Aksi</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function authReqHtml(){
+  const rows = authReqList.map(r => {
+    const act = r.status === 'pending'
+      ? `<button class="btn btn-primary btn-sm" onclick="authDecideReq('${esc(r.id)}', true)">Setujui</button> <button class="btn btn-danger btn-sm" onclick="authDecideReq('${esc(r.id)}', false)">Tolak</button>`
+      : (r.status === 'approved' ? '<span class="auth-pill ok">Disetujui</span>' : '<span class="auth-pill no">Ditolak</span>') + (r.decision_note ? `<div style="color:#6B7280;font-size:12px;">${esc(r.decision_note)}</div>` : '');
+    return `<tr><td><b>${esc(r.name||'-')}</b><div style="color:#6B7280;font-size:12px;">${esc(r.email||'')} &middot; sudah punya ${r.companies_owned} perusahaan</div></td>
+      <td><b>${esc(r.company_name)}</b>${r.reason ? `<div style="color:#6B7280;font-size:12px;">${esc(r.reason)}</div>` : ''}</td>
+      <td>${esc(String(r.created_at || '').slice(0,10))}</td><td>${act}</td></tr>`;
+  }).join('') || '<tr><td colspan="4" style="color:#6B7280;">Belum ada pengajuan.</td></tr>';
+  return `<div class="auth-sec" style="margin-top:22px;">Pengajuan Perusahaan Tambahan${authReqPending ? ' (' + authReqPending + ' menunggu)' : ''}</div>
+    <div class="auth-sub" style="margin:0 0 8px;">Setiap akun hanya boleh membuat 1 perusahaan. Perusahaan tambahan baru dibuat setelah Anda menyetujui pengajuannya.</div>
+    <div class="auth-mgmt" style="overflow-x:auto;"><table><thead><tr><th>Pemohon</th><th>Perusahaan diajukan</th><th>Tanggal</th><th>Keputusan</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+async function authDecideReq(id, approve){
+  if (!isSysOwner()) return;
+  const r = authReqList.find(x => x.id === id); if (!r) return;
+  let note = '';
+  if (approve){ if (!confirm('Setujui pembuatan perusahaan "' + r.company_name + '" untuk ' + (r.name || r.email) + '? Perusahaan akan langsung dibuat dan pemohon menjadi Owner-nya.')) return; }
+  else { note = prompt('Tolak pengajuan "' + r.company_name + '". Alasan (opsional, akan terlihat oleh pemohon):', ''); if (note === null) return; }
+  try {
+    await authRest('rpc/akt_decide_company_request', 'POST', {p_id: id, p_approve: !!approve, p_note: note});
+    authReqList = (await authRest('rpc/akt_list_company_requests', 'POST', {})) || [];
+    authReqPending = authReqList.filter(x => x.status === 'pending').length; authUpdateTitle();
+    renderAuth('manage', approve ? 'Pengajuan disetujui dan perusahaan dibuat.' : 'Pengajuan ditolak.', 'ok');
+  } catch(e){ alert('Gagal menyimpan: ' + e.message); }
 }
 async function authMgmtStatus(id, status){
   const u = authMgmt.users.find(x=>x.id===id); if (!u || id === authProfile.id) return;
@@ -6627,7 +6692,7 @@ function authMfaBannerHtml(){
     <a href="#" onclick="mfaBannerDismissed=true; renderCurrent(); return false;" style="margin-left:auto; color:inherit; opacity:.7;">Nanti</a></div>`;
 }
 const BASE_TITLE = document.title;
-function authUpdateTitle(){ document.title = (isSysOwner() && authPendingCount ? '(' + authPendingCount + ') ' : '') + BASE_TITLE; }
+function authUpdateTitle(){ document.title = (isSysOwner() && authTotalPending() ? '(' + authTotalPending() + ') ' : '') + BASE_TITLE; }
 
 
 /* ================= PANDUAN AWAL PERUSAHAAN BARU ================= */
