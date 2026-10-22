@@ -433,6 +433,7 @@
     font-family:var(--serif); font-weight:800; font-size:17px; display:flex; align-items:center; justify-content:center; letter-spacing:-.02em;}
   .brand .mono-logo{flex:0 0 40px; width:40px; height:40px; border-radius:12px; background:#fff; padding:2px; object-fit:contain;}
   .brand .txt{min-width:0;}
+  .due-badge{margin-left:auto; background:#B4452D; color:#fff; font-size:10.5px; font-weight:700; border-radius:10px; padding:1px 7px; line-height:16px;}
   .auth-logo{display:block; margin:0 auto 14px; width:132px; height:auto;}
   .auth-card.wide .auth-logo{width:96px; margin-bottom:10px;}
   .brand .mark{font-family:var(--serif); font-weight:700; font-size:17px; color:#fff; letter-spacing:-.01em; line-height:1.15;}
@@ -649,8 +650,9 @@
       <li><button data-tab="penyusutan"><span class="ic">&#9203;</span><span class="lbl">Penyusutan</span></button></li>
       <li><button data-tab="inventory"><span class="ic">&#128230;</span><span class="lbl">Inventory</span></button></li>
 
-      <li class="navgroup-label">Penjualan</li>
+      <li class="navgroup-label">Penjualan &amp; Tagihan</li>
       <li><button data-tab="invoice"><span class="ic">&#128179;</span><span class="lbl">Invoice</span></button></li>
+      <li><button data-tab="piutang"><span class="ic">&#9200;</span><span class="lbl">Piutang &amp; Utang</span></button></li>
 
       <li class="navgroup-label">Analisis &amp; Kontrol</li>
       <li><button data-tab="rekonsiliasi"><span class="ic">&#128257;</span><span class="lbl">Rekonsiliasi Bank</span></button></li>
@@ -765,6 +767,8 @@ const DB = {
   activeYear: 2026,
   taxSettings: {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false},   // tarif PPN & akun PPN & opsi UMKM
   onboarding: {dismissed:true, team:false},   // panduan awal perusahaan baru
+  bills: [],          // {id, kind:'ar'|'ap', no, date, party, ref, due, amount, account, journalId, payments:[{id,date,amount,cashAcc,journalId,note,voided}]}
+  taxRecords: [],     // catatan bukti potong PPh 21/23
   lockedUntil: '',   // 'YYYY-MM': semua transaksi sampai akhir bulan ini terkunci
   closedYears: []   // tahun fiskal yang sudah "ditutup" lewat menu Setup — mengunci tanggal transaksi pada tahun tsb
 };
@@ -788,7 +792,7 @@ function logAudit(action, target, detail){
    Catatan: aplikasi ini TIDAK memakai localStorage/sessionStorage (dibatasi platform),
    sehingga cara paling aman menjaga data adalah mengunduh cadangan berkala. */
 let unsavedChangeCount = 0;
-const BACKUP_KEYS = ['company','coa','journal','fixedAssets','inventoryItems','stockMoves','invoices','counters','branches','auditLog','budgets','bankRecon','users','activeUser','activeYear','closedYears','lockedUntil','taxSettings','onboarding'];
+const BACKUP_KEYS = ['company','coa','journal','fixedAssets','inventoryItems','stockMoves','invoices','counters','branches','auditLog','budgets','bankRecon','users','activeUser','activeYear','closedYears','lockedUntil','taxSettings','onboarding','bills','taxRecords'];
 function exportBackupJSON(){
   const snapshot = {};
   BACKUP_KEYS.forEach(k => { snapshot[k] = DB[k]; });
@@ -832,6 +836,8 @@ function handleImportBackup(input){
     if (data.lockedUntil === undefined) DB.lockedUntil = '';
     if (keepLockImp > (DB.lockedUntil || '')) DB.lockedUntil = keepLockImp;   // memuat cadangan tidak boleh membuka kunci periode
     if (data.onboarding === undefined) DB.onboarding = {dismissed:true, team:false};
+    if (data.bills === undefined) DB.bills = [];
+    if (data.taxRecords === undefined) DB.taxRecords = [];
     if (data.taxSettings === undefined) DB.taxSettings = {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false};
     unsavedChangeCount = 0;
     logAuditSilent('Backup', 'Impor Cadangan Data', 'Dipulihkan dari file ' + file.name);
@@ -994,6 +1000,8 @@ async function supaPull(silent){
     BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = data[k]; });
     if (data.lockedUntil === undefined) DB.lockedUntil = '';
     if (data.onboarding === undefined) DB.onboarding = {dismissed:true, team:false};
+    if (data.bills === undefined) DB.bills = [];
+    if (data.taxRecords === undefined) DB.taxRecords = [];
     if (data.taxSettings === undefined) DB.taxSettings = {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false};
     supaVersion = rows[0].updated_at;
     unsavedChangeCount = 0;
@@ -1093,9 +1101,9 @@ function isViewer(){ return currentRole() === 'user'; }
 function isOwner(){ return currentRole() === 'owner'; }
 function isAdminLevel(){ return currentRole() === 'admin' || currentRole() === 'owner'; }
 const ALLOWED_TABS_USER = ['dashboard','setup','coa','jurnalkas','jurnalpenjualan','jurnalpembelian','jurnalpenyesuaian',
-  'jurnal','ledger','labarugi','neraca','aruskas','ekuitas','penyusutan','inventory'];
+  'jurnal','ledger','labarugi','neraca','aruskas','ekuitas','penyusutan','inventory','piutang'];
 const VIEWER_SAFE_ONCLICK = ['switchTab', 'window.print', 'exportJurnalCSV', 'exportLedgerCSV', 'exportLabaRugiCSV',
-  'exportNeracaCSV', 'exportArusKasCSV', 'exportEkuitasCSV', 'viewJournal', 'viewInvoice', 'closeModal',
+  'exportNeracaCSV', 'exportArusKasCSV', 'exportEkuitasCSV', 'viewJournal', 'viewInvoice', 'viewBill', 'exportArApExcel', 'exportTaxRecExcel', 'printTaxRec', 'closeModal',
   'exportBackupJSON', 'printInvoice', 'authLogout', 'authSwitchCompany', 'authOpenManage',
   "lrView=", "nrView=", "akView=", "ekView="];
 
@@ -1759,6 +1767,7 @@ const TAB_META = {
   penyusutan: {title:'Penyusutan Aset Tetap', desc:'Jadwal penyusutan garis lurus dan posting ke jurnal'},
   inventory: {title:'Inventory', desc:'Kartu stok dan nilai persediaan metode rata-rata'},
   invoice: {title:'Invoice Penjualan', desc:'Buat faktur penjualan dan posting otomatis ke jurnal & stok'},
+  piutang: {title:'Piutang & Utang', desc:'Tagihan pelanggan dan utang ke supplier, umur tunggakan, serta pencatatan pelunasan'},
   rekonsiliasi: {title:'Rekonsiliasi Bank', desc:'Cocokkan catatan Anda dengan mutasi asli di rekening bank, langkah demi langkah'},
   anggaran: {title:'Anggaran vs Realisasi', desc:'Bandingkan target anggaran bulanan dengan realisasi Laba Rugi'},
   pajak: {title:'Pajak', desc:'Rekap PPN, hitung PPh 21 (TER), PPh 23, dan PPh Final UMKM. Bukan pengganti perhitungan resmi'},
@@ -1813,7 +1822,7 @@ function renderCurrent(){
     jurnalpenyesuaian: renderJurnalPenyesuaian,
     ledger: renderLedger, labarugi: renderLabaRugi, neraca: renderNeraca,
     aruskas: renderArusKas, ekuitas: renderEkuitas,
-    penyusutan: renderPenyusutan, inventory: renderInventory, invoice: renderInvoice,
+    penyusutan: renderPenyusutan, inventory: renderInventory, invoice: renderInvoice, piutang: renderPiutang,
     rekonsiliasi: renderRekonsiliasi, anggaran: renderAnggaran, pajak: renderPajak,
     auditlog: renderAuditLog, excel: renderExcel, versi: renderVersi, trash: renderTrash, cabang: renderCabang, pengaturan: renderPengaturan
   };
@@ -1846,6 +1855,7 @@ function applySidebarVisibility(){
     }
   });
   if (group) group.el.style.display = group.items.some(x=>x.style.display!=='none') ? '' : 'none';
+  updateDueBadge();
 }
 function applyViewerLock(){
   // #content dibuat ulang dari nol tiap render (innerHTML), jadi otomatis "bersih" dari status disabled sebelumnya.
@@ -1882,11 +1892,11 @@ function setContent(html){
 /* ---------------- Journal source labels ---------------- */
 const SOURCE_LABELS = {
   manual: 'Umum', kas: 'Kas', penjualan: 'Penjualan', pembelian: 'Pembelian',
-  penyesuaian: 'Penyesuaian', invoice: 'Invoice', hpp: 'HPP', penyusutan: 'Penyusutan'
+  penyesuaian: 'Penyesuaian', invoice: 'Invoice', hpp: 'HPP', penyusutan: 'Penyusutan', pelunasan: 'Pelunasan', pembalik: 'Pembalik'
 };
 const SOURCE_PILL = {
   manual: 'pill-aset', kas: 'pill-pendapatan', penjualan: 'pill-pendapatan', pembelian: 'pill-kewajiban',
-  penyesuaian: 'pill-modal', invoice: 'pill-pendapatan', hpp: 'pill-beban', penyusutan: 'pill-beban'
+  penyesuaian: 'pill-modal', invoice: 'pill-pendapatan', hpp: 'pill-beban', penyusutan: 'pill-beban', pelunasan: 'pill-pendapatan', pembalik: 'pill-warn'
 };
 
 
@@ -1950,7 +1960,7 @@ function renderDashboard(){
   const recent = activeJournal().slice().sort((a,b)=> (b.date+b.no) > (a.date+a.no) ? 1 : -1).slice(0,6);
   const pendingCount = DB.journal.filter(j=>!j.deleted && j.status==='pending').length;
 
-  const cards = `${authPendingBannerHtml()}${authMfaBannerHtml()}${onboardingHtml()}
+  const cards = `${authPendingBannerHtml()}${authMfaBannerHtml()}${onboardingHtml()}${dueReminderHtml()}
     <div class="cards">
       <div class="card"><div class="label">Total Aset</div><div class="value">${fmtRp(nr.totalAset)}</div></div>
       <div class="card"><div class="label">Total Kewajiban + Modal</div><div class="value">${fmtRp(nr.totalKM)}</div></div>
@@ -2339,11 +2349,11 @@ function saveCoa(editingCode){
   }
   if (editingCode){
     const cur = coaByCode(editingCode) || {};
-    const structural = cur.category !== category || !!cur.contra !== contra;
+    const structural = cur.category !== category || !!cur.contra !== contra || !!cur.isCash !== isCash;
     const inJournal = DB.journal.some(j => j.lines.some(l => l.account === editingCode));
-    if (structural && DB.lockedUntil && inJournal){ alert('Kategori atau status akun lawan tidak bisa diubah pada akun yang sudah dipakai jurnal selama ada periode terkunci, karena laporan periode itu akan berubah. Owner dapat membuka kunci dulu.'); return; }
-    if (structural && DB.closedYears.length && inJournal){ alert('Kategori atau status akun lawan tidak bisa diubah pada akun yang sudah dipakai jurnal setelah ada tahun fiskal yang ditutup.'); return; }
-    if (structural && inJournal && !confirm('Akun ini sudah dipakai pada jurnal. Mengubah kategori akan mengubah seluruh laporan, termasuk periode lalu. Lanjutkan?')) return;
+    if (structural && DB.lockedUntil && inJournal){ alert('Kategori, status akun lawan, atau status kas/bank tidak bisa diubah pada akun yang sudah dipakai jurnal selama ada periode terkunci, karena laporan periode itu akan berubah. Owner dapat membuka kunci dulu.'); return; }
+    if (structural && DB.closedYears.length && inJournal){ alert('Kategori, status akun lawan, atau status kas/bank tidak bisa diubah pada akun yang sudah dipakai jurnal setelah ada tahun fiskal yang ditutup.'); return; }
+    if (structural && inJournal && !confirm('Akun ini sudah dipakai pada jurnal. Mengubah kategori atau status kas/bank akan mengubah laporan, piutang, dan rekonsiliasi, termasuk periode lalu. Lanjutkan?')) return;
   }
   snapshotForUndo('Ubah Kode Akun');
   if (editingCode){
@@ -2400,7 +2410,7 @@ function renderJurnal(){
     </tr>`;
   }).join('') : `<tr class="empty-row"><td colspan="7">Belum ada transaksi pada filter ini.</td></tr>`;
 
-  const filterOptions = ['all','manual','kas','penjualan','pembelian','penyesuaian','invoice','hpp','penyusutan']
+  const filterOptions = ['all','manual','kas','penjualan','pembelian','penyesuaian','invoice','hpp','penyusutan','pelunasan','pembalik']
     .map(s => `<option value="${s}" ${jurnalFilterSource===s?'selected':''}>${s==='all'?'Semua Jenis':(SOURCE_LABELS[s]||s)}</option>`).join('');
   const trashCount = DB.journal.filter(j=>j.deleted).length;
   const pendingBanner = pendingCount ? `<div class="balance-check bad" style="margin-bottom:14px;">&#9203; ${pendingCount} jurnal dibuat oleh Staff sedang menunggu persetujuan Admin — belum masuk ke laporan keuangan manapun.</div>` : '';
@@ -2530,6 +2540,9 @@ function deleteJournal(id){
   const j = DB.journal.find(x=>x.id===id);
   if (!j) return;
   if (!guardPeriod(j.date)) return;
+  { const bl = (DB.bills || []).find(b => b.journalId === id && payList(b).length); if (bl){ alert('Jurnal ini sudah punya pelunasan (' + billLabel(bl) + '). Batalkan pelunasannya dulu di menu Piutang & Utang.'); return; } }
+  if (j.source === 'invoice' || j.source === 'hpp'){ alert('Jurnal ini dibuat oleh Invoice. Untuk membatalkannya gunakan tombol Batalkan di menu Invoice, supaya stok dan piutang ikut dibalik.'); return; }
+  if (j.source === 'pelunasan' || j.source === 'pembalik'){ alert('Jurnal ' + (SOURCE_LABELS[j.source]) + ' tidak dihapus langsung karena terkait data piutang/utang atau pembatalan. Gunakan tombol Batalkan pelunasan di menu Piutang & Utang.'); return; }
   if (j.source && j.source !== 'manual'){
     if (!confirm('Jurnal ini dibuat otomatis dari modul lain (' + (SOURCE_LABELS[j.source]||j.source) + '). Menghapusnya tidak akan membatalkan transaksi sumbernya (mis. mutasi stok). Lanjutkan?')) return;
   } else if (!confirm('Hapus jurnal ini? Entri yang dihapus masih bisa dipulihkan lewat menu "Riwayat Terhapus".')) return;
@@ -3276,29 +3289,34 @@ function guessAccount(cats, keyword){
 
 function renderInvoice(){
   const rows = DB.invoices.slice().sort((a,b)=> (b.date+b.no) > (a.date+a.no) ? 1 : -1);
+  const admin = isAdminLevel();
   const body = rows.length ? rows.map(inv => {
-    return `<tr>
+    const st = invStatus(inv);
+    const credit = invIsCredit(inv);
+    return `<tr${inv.voided ? ' style="opacity:.6;"' : ''}>
       <td class="tag-small">INV-${String(inv.no).padStart(4,'0')}</td>
       <td class="tag-small">${fmtDate(inv.date)}</td>
       <td>${esc(inv.customer)}</td>
       <td class="num">${inv.items.reduce((s,i)=>s+i.qty,0)}</td>
       <td class="num">${fmtRp(inv.grand)}</td>
+      <td class="center"><span class="pill ${st.pill}">${st.label}</span>${credit && !inv.voided && invOutstanding(inv) > 0.5 && invPaid(inv) > 0 ? `<div class="hint">sisa ${fmtRp(invOutstanding(inv))}</div>` : ''}</td>
       <td class="center">
         <button class="btn btn-outline btn-sm" onclick="viewInvoice('${inv.id}')">Lihat</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')">Hapus</button>
+        ${credit && !inv.voided && invOutstanding(inv) > 0.5 ? `<button class="btn btn-primary btn-sm" onclick="openPayModal('inv','${inv.id}')">Terima Bayar</button>` : ''}
+        ${inv.voided ? `<button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')">Hapus Arsip</button>` : `<button class="btn btn-danger btn-sm" onclick="openVoidInvoiceModal('${inv.id}')">Batalkan</button>`}
       </td>
     </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="6">Belum ada invoice. Klik "Buat Invoice" untuk mulai.</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="7">Belum ada invoice. Klik "Buat Invoice" untuk mulai.</td></tr>`;
 
   setContent(`
     <div class="section">
       <div class="section-head">
-        <div><h2>Daftar Invoice Penjualan</h2><div class="hint">${rows.length} invoice &middot; menyimpan otomatis ke jurnal penjualan dan mengurangi stok</div></div>
+        <div><h2>Daftar Invoice Penjualan</h2><div class="hint">${rows.length} invoice &middot; menyimpan otomatis ke jurnal penjualan dan mengurangi stok. Pilih akun piutang agar tagihan tercatat dan bisa dilunasi bertahap</div></div>
         <button class="btn btn-primary" onclick="openInvoiceModal()" ${DB.inventoryItems.length?'':'disabled title="Tambahkan produk di menu Inventory terlebih dahulu"'}>+ Buat Invoice</button>
       </div>
       <div class="section-body scrollx">
         <table>
-          <thead><tr><th>No. Invoice</th><th>Tanggal</th><th>Pelanggan</th><th class="num">Jumlah Unit</th><th class="num">Total</th><th class="center">Aksi</th></tr></thead>
+          <thead><tr><th>No. Invoice</th><th>Tanggal</th><th>Pelanggan</th><th class="num">Jumlah Unit</th><th class="num">Total</th><th class="center">Status</th><th class="center">Aksi</th></tr></thead>
           <tbody>${body}</tbody>
         </table>
       </div>
@@ -3484,15 +3502,18 @@ function saveInvoice(){
   DB.invoices.push({
     id: uid('inv'), no: invNo, date, customer, customerNpwp, fakturNo, items, ppn: ppnChecked, ppnRate: ppnChecked ? ppnRate() : 0,
     subtotal: t.subtotal, disc: t.disc, dpp: t.dpp, ppnAmount: t.ppn, grand: t.grand,
-    term, dueDate: due, note, journalIds, cogs: totalCogs
+    term, dueDate: due, note, journalIds, cogs: totalCogs, payAcc: paymentAcc, payments: []
   });
 
   closeModal();
   renderCurrent();
 }
 function deleteInvoice(id){
-  if (!confirm('Hapus invoice ini? Jurnal dan mutasi stok yang tercatat tidak akan otomatis dibatalkan.')) return;
-  snapshotForUndo('Hapus Invoice');
+  const inv = DB.invoices.find(x=>x.id===id);
+  if (!inv) return;
+  if (!inv.voided){ alert('Invoice yang masih berlaku tidak dihapus langsung. Gunakan tombol Batalkan agar jurnal dan stok ikut dibalik.'); return; }
+  if (!confirm('Hapus arsip invoice yang sudah dibatalkan ini? Jurnal pembaliknya tetap ada.')) return;
+  snapshotForUndo('Hapus Arsip Invoice');
   DB.invoices = DB.invoices.filter(x=>x.id!==id);
   renderCurrent();
 }
@@ -3516,6 +3537,7 @@ function invoiceBodyHtml(inv){
           <div class="meta">No. INV-${String(inv.no).padStart(4,'0')}<br>${fmtDate(inv.date)}</div>
         </div>
       </div>
+      ${inv.voided ? '<div style="margin:0 0 12px; padding:8px 12px; border:2px solid #B4452D; color:#B4452D; font-weight:700; text-align:center; letter-spacing:.08em;">DIBATALKAN</div>' : ''}
       <div class="row" style="margin-bottom:14px;">
         <div class="field"><label>Ditagihkan kepada</label><div><strong>${esc(inv.customer)}</strong></div></div>
         ${(inv.customerNpwp || inv.fakturNo) ? `<div class="field"><label>NPWP/NIK &middot; Faktur Pajak</label><div>${esc(inv.customerNpwp||'-')} &middot; ${esc(inv.fakturNo||'-')}</div></div>` : ''}
@@ -3540,9 +3562,15 @@ function invoiceBodyHtml(inv){
 function viewInvoice(id){
   const inv = DB.invoices.find(x=>x.id===id);
   if (!inv) return;
-  const body = invoiceBodyHtml(inv);
+  const st = invStatus(inv), credit = invIsCredit(inv);
+  const info = `<div style="margin-bottom:12px;"><span class="pill ${st.pill}">${st.label}</span>
+    ${credit && !inv.voided ? ` <span class="hint">dibayar ${fmtRp(invPaid(inv))} &middot; sisa ${fmtRp(invOutstanding(inv))}</span>` : ''}
+    ${inv.voided ? ` <span class="hint">${fmtDate(inv.voided.date)}${inv.voided.reason ? ' — ' + esc(inv.voided.reason) : ''}</span>` : ''}</div>`;
+  const body = info + invoiceBodyHtml(inv) + (credit ? payTableHtml('inv', inv.id, inv) : '');
   const foot = `<button class="btn btn-outline" onclick="closeModal()">Tutup</button>
-    <button class="btn btn-primary" onclick="printInvoice('${inv.id}')">Cetak</button>`;
+    <button class="btn btn-primary" onclick="printInvoice('${inv.id}')">Cetak</button>
+    ${credit && !inv.voided && invOutstanding(inv) > 0.5 ? `<button class="btn btn-primary" onclick="openPayModal('inv','${inv.id}')">Catat Pembayaran</button>` : ''}
+    ${inv.voided ? '' : `<button class="btn btn-danger" onclick="openVoidInvoiceModal('${inv.id}')">Batalkan Invoice</button>`}`;
   openModal('Invoice INV-' + String(inv.no).padStart(4,'0'), body, foot);
 }
 function printInvoice(id){
@@ -3811,7 +3839,10 @@ function openPenjualanModal(){
       <div class="field"><label>Tanggal</label><input type="date" id="pj_date" value="${todayISO()}"></div>
       <div class="field"><label>No. Faktur (opsional)</label><input id="pj_ref" placeholder="cth. FJ-001"></div>
     </div>
-    <div class="field"><label>Nama Pelanggan</label><input id="pj_customer" placeholder="cth. Toko Sumber Rejeki"></div>
+    <div class="row">
+      <div class="field"><label>Nama Pelanggan</label><input id="pj_customer" placeholder="cth. Toko Sumber Rejeki"></div>
+      <div class="field"><label>Jatuh tempo (bila belum dibayar)</label><input type="date" id="pj_due"></div>
+    </div>
     <div class="row">
       <div class="field"><label>Akun Penerimaan (Debit)</label><select id="pj_debit_acc">${acctOptionsFiltered(['Aset'], debitAcc)}</select></div>
       <div class="field"><label>Akun Pendapatan (Kredit)</label><select id="pj_credit_acc">${acctOptionsFiltered(['Pendapatan'], revenueAcc)}</select></div>
@@ -3859,7 +3890,9 @@ function savePenjualan(){
   const lines = [{account:debitAcc, debit:amount+ppn, kredit:0}, {account:creditAcc, debit:0, kredit:amount}];
   if (ppn>0) lines.push({account:ppnAcc, debit:0, kredit:ppn});
   snapshotForUndo('Tambah Jurnal Penjualan');
-  addJournalEntry({date, ref, desc: desc || ('Penjualan kepada ' + (customer||'pelanggan')), lines, branch, source:'penjualan'});
+  const pjEntry = addJournalEntry({date, ref, desc: desc || ('Penjualan kepada ' + (customer||'pelanggan')), lines, branch, source:'penjualan'});
+  const pjAcc = coaByCode(debitAcc);
+  if (pjAcc && pjAcc.category === 'Aset' && !pjAcc.isCash) arRegisterBill('ar', pjEntry, {party: customer, ref, due: document.getElementById('pj_due').value, amount: amount + ppn, account: debitAcc});
   closeModal();
   renderCurrent();
 }
@@ -3916,7 +3949,10 @@ function openPembelianModal(){
       <div class="field"><label>Tanggal</label><input type="date" id="pb_date" value="${todayISO()}"></div>
       <div class="field"><label>No. Bukti (opsional)</label><input id="pb_ref" placeholder="cth. FB-001"></div>
     </div>
-    <div class="field"><label>Nama Supplier</label><input id="pb_supplier" placeholder="cth. PT Sumber Bahan"></div>
+    <div class="row">
+      <div class="field"><label>Nama Supplier</label><input id="pb_supplier" placeholder="cth. PT Sumber Bahan"></div>
+      <div class="field"><label>Jatuh tempo (bila dibayar kemudian)</label><input type="date" id="pb_due"></div>
+    </div>
     <div class="field">
       <label>Jenis Pembelian</label>
       <select id="pb_type" onchange="pbType=this.value; pbToggleType();">
@@ -4012,7 +4048,9 @@ function savePembelian(){
   if (ppn>0) debitLines.push({account:ppnAcc, debit:ppn, kredit:0});
   const lines = [...debitLines, {account:creditAcc, debit:0, kredit:sub+ppn}];
 
-  addJournalEntry({date, ref, desc: desc || ('Pembelian dari ' + (supplier||'supplier')), lines, branch, source:'pembelian'});
+  const pbEntry = addJournalEntry({date, ref, desc: desc || ('Pembelian dari ' + (supplier||'supplier')), lines, branch, source:'pembelian'});
+  const pbAcc = coaByCode(creditAcc);
+  if (pbAcc && pbAcc.category === 'Kewajiban') arRegisterBill('ap', pbEntry, {party: supplier, ref, due: document.getElementById('pb_due').value, amount: sub + ppn, account: creditAcc});
   closeModal();
   renderCurrent();
 }
@@ -4702,6 +4740,8 @@ function renderRekonsiliasi(){
       </div>
     </div>
 
+    ${bankSectionHtml()}
+
     <div class="section">
       <div class="section-head">
         <div><h2>Langkah 2 — Centang Transaksi yang Sudah Muncul di Bank</h2><div class="hint">${sudahCount} dari ${rows.length} transaksi sudah dicocokkan</div></div>
@@ -5163,6 +5203,7 @@ function blankCompanyData(name){
   DB.coa.forEach(a => { a.initial = 0; });
   DB.journal = []; DB.fixedAssets = []; DB.inventoryItems = []; DB.stockMoves = []; DB.invoices = [];
   DB.budgets = {}; DB.bankRecon = []; DB.auditLog = []; DB.closedYears = []; DB.lockedUntil = '';
+  DB.bills = []; DB.taxRecords = [];
   DB.counters = {journal:0, invoice:0};
   // reset SEMUA kunci data lain agar tidak ada yang terbawa dari perusahaan yang dibuka sebelumnya
   DB.branches = []; DB.activeYear = 2026;
@@ -5199,6 +5240,8 @@ async function authChooseCompany(id){
       BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = data[k]; });
     if (data.lockedUntil === undefined) DB.lockedUntil = '';
     if (data.onboarding === undefined) DB.onboarding = {dismissed:true, team:false};
+    if (data.bills === undefined) DB.bills = [];
+    if (data.taxRecords === undefined) DB.taxRecords = [];
     if (data.taxSettings === undefined) DB.taxSettings = {ppnRate:11, ppnKeluaranAcc:'', ppnMasukanAcc:'', umkmOP:false};
       supaVersion = rows[0].updated_at;
       needPush = false;
@@ -5721,6 +5764,7 @@ function xlNum(v){
   s = s.replace(/[()\-]/g,'');
   if (s.includes('.') && s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
   else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,'');
+  else if (/^\d{1,3}(,\d{3}){2,}$/.test(s)) s = s.replace(/,/g,'');
   else if (s.includes(',')) s = s.replace(',','.');
   const n = parseFloat(s);
   return isNaN(n) ? NaN : (neg ? -n : n);
@@ -6035,6 +6079,8 @@ async function versiRestore(id){
     snapshotForUndo('Pulihkan Versi');
     const keepLock = DB.lockedUntil || '', keepAudit = DB.auditLog;
     BACKUP_KEYS.forEach(k => { if (data[k] !== undefined) DB[k] = JSON.parse(JSON.stringify(data[k])); });
+    if (data.bills === undefined) DB.bills = [];
+    if (data.taxRecords === undefined) DB.taxRecords = [];
     const dl = data.lockedUntil || '';
     DB.lockedUntil = keepLock > dl ? keepLock : dl;
     DB.auditLog = keepAudit;
@@ -6119,7 +6165,7 @@ function ppnMonthlyRows(){
 }
 function ppnFakturRows(){
   const months = fiscalMonths(); const lo = months[0] + '-01', hi = lastDayOfMonthISO(months[months.length - 1]);
-  return DB.invoices.filter(i => i.ppn && i.date >= lo && i.date <= hi).sort((a,b) => a.date.localeCompare(b.date) || a.no - b.no);
+  return DB.invoices.filter(i => i.ppn && !i.voided && i.date >= lo && i.date <= hi).sort((a,b) => a.date.localeCompare(b.date) || a.no - b.no);
 }
 function ppnMasukanLines(){
   const mAcc = ppnAccountCode('masukan'); if (!mAcc) return [];
@@ -6327,6 +6373,8 @@ function renderPajak(){
         <div class="hint" style="margin-top:10px;">Tarif final ini berlaku untuk jangka waktu terbatas: 7 tahun untuk orang pribadi, 4 tahun untuk CV, firma, dan koperasi, 3 tahun untuk PT. Cek kelayakan Anda ke DJP.</div>
       </div>
     </div>
+
+    ${taxRecSectionHtml()}
   `);
   p21SetahunTouched = false; p21JanNovTouched = false;
   calcPph21Ui(); calcPph23Ui(); calcUmkmUi();
@@ -6376,7 +6424,7 @@ function calcUmkmUi(){
 }
 
 /* ================= KOP & TANDA TANGAN CETAK ================= */
-const PRINT_TABS = ['jurnal','ledger','labarugi','neraca','aruskas','ekuitas','anggaran','penyusutan','inventory','pajak','rekonsiliasi'];
+const PRINT_TABS = ['jurnal','ledger','labarugi','neraca','aruskas','ekuitas','anggaran','penyusutan','inventory','pajak','rekonsiliasi','piutang'];
 function printSubtitle(){
   try {
     if (['labarugi','aruskas','ekuitas'].includes(currentTab)) return 'Periode ' + fmtDate(fiscalYearBounds().start) + ' s.d. ' + fmtDate(reportAsOfDate());
@@ -6632,6 +6680,602 @@ function onboardingMarkTeam(){
   DB.onboarding.team = true; onboardingTouch(); renderCurrent();
 }
 
+/* ================= PIUTANG & UTANG, PELUNASAN, BATAL FAKTUR ================= */
+const AR_PAD = n => String(n).padStart(4,'0');
+const AR_BUCKETS = ['Belum jatuh tempo','Terlambat 1–30 hari','Terlambat 31–60 hari','Terlambat 61–90 hari','Terlambat lebih dari 90 hari'];
+let arAsOf = '';
+let arShowPaid = false;
+
+function arDayNum(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso||''));
+  return m ? Math.floor(Date.UTC(+m[1], +m[2]-1, +m[3]) / 86400000) : NaN;
+}
+function arDaysLate(item, asOf){
+  const base = item.due || item.date;
+  const d = arDayNum(asOf) - arDayNum(base);
+  return isNaN(d) ? 0 : d;
+}
+function arBucketIdx(days){ return days <= 0 ? 0 : days <= 30 ? 1 : days <= 60 ? 2 : days <= 90 ? 3 : 4; }
+
+function invPayAcc(inv){
+  if (inv.payAcc) return inv.payAcc;
+  const j = DB.journal.find(x => x.id === (inv.journalIds || [])[0]);
+  const l = j && j.lines.find(x => parseNum(x.debit) > 0);
+  return l ? l.account : '';
+}
+function invIsCredit(inv){
+  const a = coaByCode(invPayAcc(inv));
+  return !!(a && a.category === 'Aset' && !a.isCash);
+}
+function payList(o){ return (o.payments || []).filter(p => !p.voided); }
+function payTotal(o){ return payList(o).reduce((s,p) => s + parseNum(p.amount), 0); }
+function invPaid(inv){ return invIsCredit(inv) ? payTotal(inv) : inv.grand; }
+function invOutstanding(inv){ return inv.voided ? 0 : Math.max(inv.grand - invPaid(inv), 0); }
+function invStatus(inv){
+  if (inv.voided) return {k:'void', label:'Dibatalkan', pill:'pill-warn'};
+  if (invOutstanding(inv) <= 0.5) return {k:'paid', label:'Lunas', pill:'pill-ok'};
+  return invPaid(inv) > 0 ? {k:'part', label:'Dibayar sebagian', pill:'pill-modal'} : {k:'open', label:'Belum dibayar', pill:'pill-warn'};
+}
+function billAlive(b){ const j = DB.journal.find(x => x.id === b.journalId); return !b.voided && (!b.journalId || (!!j && !j.deleted)); }
+function billOutstanding(b){ return !billAlive(b) ? 0 : Math.max(b.amount - payTotal(b), 0); }
+function billLabel(b){ return b.ref || ((b.kind === 'ar' ? 'PJ-' : 'FB-') + AR_PAD(b.no || 0)); }
+
+function arItems(kind, includePaid, asOf){
+  const out = [];
+  const paidTo = o => payList(o).filter(p => !asOf || p.date <= asOf).reduce((t,p) => t + parseNum(p.amount), 0);
+  const isVoid = o => o.voided && (!asOf || ((o.voided.date || o.voidDate || '0000') <= asOf));
+  if (kind === 'ar') DB.invoices.forEach(inv => {
+    if (isVoid(inv) || !invIsCredit(inv) || (asOf && inv.date > asOf)) return;
+    const paid = paidTo(inv), o = Math.max(inv.grand - paid, 0);
+    if (o <= 0.5 && !includePaid) return;
+    out.push({type:'inv', id:inv.id, label:'INV-' + AR_PAD(inv.no), party:inv.customer, date:inv.date, due:inv.dueDate || '', amount:inv.grand, paid, outstanding:o});
+  });
+  (DB.bills || []).filter(b => b.kind === kind && billAlive(b) && !(asOf && b.date > asOf)).forEach(b => {
+    const paid = paidTo(b), o = Math.max(b.amount - paid, 0);
+    if (o <= 0.5 && !includePaid) return;
+    out.push({type:'bill', id:b.id, label:billLabel(b), party:b.party, date:b.date, due:b.due || '', amount:b.amount, paid, outstanding:o});
+  });
+  return out;
+}
+function arFind(type, id){
+  if (type === 'inv'){
+    const inv = DB.invoices.find(x => x.id === id); if (!inv) return null;
+    return {kind:'ar', obj:inv, label:'INV-' + AR_PAD(inv.no), party:inv.customer, total:inv.grand, outstanding:invOutstanding(inv), acc:invPayAcc(inv), date:inv.date};
+  }
+  const b = (DB.bills || []).find(x => x.id === id); if (!b) return null;
+  return {kind:b.kind, obj:b, label:billLabel(b), party:b.party, total:b.amount, outstanding:billOutstanding(b), acc:b.account, date:b.date};
+}
+
+function reverseJournalEntry(j, date, why){
+  return addJournalEntry({
+    date, ref: 'BTL-' + (j.ref || ('JU-' + String(j.no).padStart(3,'0'))),
+    desc: 'Pembalik: ' + j.desc + (why ? ' (' + why + ')' : ''), branch: j.branch,
+    lines: j.lines.map(l => ({account: l.account, debit: parseNum(l.kredit), kredit: parseNum(l.debit)})),
+    source: 'pembalik'
+  });
+}
+
+/* ---- Catat pelunasan ---- */
+function openPayModal(type, id){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat mencatat pelunasan.'); return; }
+  const it = arFind(type, id); if (!it) return;
+  if (it.outstanding <= 0.5){ alert('Dokumen ini sudah lunas.'); return; }
+  const accs = cashAccounts();
+  if (!accs.length){ alert('Belum ada akun kas/bank. Tandai akun kas di menu Kode Akun terlebih dahulu.'); return; }
+  const isAr = it.kind === 'ar';
+  const body = `
+    <div class="hint" style="margin-bottom:10px;">${esc(it.label)} &middot; ${esc(it.party || '-')} &middot; total ${fmtRp(it.total)} &middot; sisa <strong>${fmtRp(it.outstanding)}</strong></div>
+    <div class="row">
+      <div class="field"><label>Tanggal ${isAr ? 'diterima' : 'dibayar'}</label><input type="date" id="py_date" value="${todayISO()}"></div>
+      <div class="field"><label>Jumlah</label><input type="number" id="py_amount" value="${Math.round(it.outstanding * 100) / 100}"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>${isAr ? 'Masuk ke akun kas/bank' : 'Dibayar dari akun kas/bank'}</label><select id="py_acc">${accs.map(a => `<option value="${esc(a.code)}">${esc(a.code)} — ${esc(a.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Catatan (opsional)</label><input id="py_note" placeholder="cth. Transfer BCA"></div>
+    </div>
+    <label style="display:flex; align-items:flex-start; gap:6px; margin-top:6px; font-size:12.5px;"><input type="checkbox" id="py_manual" style="width:auto; margin-top:3px;"> <span>Pembayaran ini sudah saya catat sendiri di jurnal (mis. lewat Kas Masuk). Hanya tandai tagihan sebagai terbayar, jangan buat jurnal lagi.</span></label>
+    <div class="hint" style="margin-top:6px;">Jumlah boleh kurang dari sisa untuk pembayaran bertahap.</div>`;
+  openModal((isAr ? 'Catat Penerimaan — ' : 'Catat Pembayaran Utang — ') + it.label, body,
+    `<button class="btn btn-outline" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="savePayment('${type}','${id}')">Simpan</button>`);
+}
+function savePayment(type, id){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat mencatat pelunasan.'); return; }
+  const it = arFind(type, id); if (!it) return;
+  const date = document.getElementById('py_date').value;
+  const amount = parseNum(document.getElementById('py_amount').value);
+  const cashAcc = document.getElementById('py_acc').value;
+  const note = document.getElementById('py_note').value.trim();
+  const manual = !!document.getElementById('py_manual').checked;
+  if (!date){ alert('Tanggal wajib diisi.'); return; }
+  if (date < it.date){ alert('Tanggal pelunasan tidak boleh sebelum tanggal dokumen (' + fmtDate(it.date) + ').'); return; }
+  if (!(amount > 0)){ alert('Jumlah harus lebih dari nol.'); return; }
+  if (amount > it.outstanding + 0.5){ alert('Jumlah melebihi sisa tagihan (' + fmtRp(it.outstanding) + ').'); return; }
+  if (!manual && (!cashAcc || !it.acc || cashAcc === it.acc)){ alert('Akun kas/bank tidak valid atau sama dengan akun ' + (it.kind === 'ar' ? 'piutang' : 'utang') + '.'); return; }
+  if (!manual && !confirmFiscalDate(date)) return;
+  snapshotForUndo('Catat Pelunasan');
+  const lines = it.kind === 'ar'
+    ? [{account:cashAcc, debit:amount, kredit:0}, {account:it.acc, debit:0, kredit:amount}]
+    : [{account:it.acc, debit:amount, kredit:0}, {account:cashAcc, debit:0, kredit:amount}];
+  let entry = null;
+  if (!manual) try {
+    entry = addJournalEntry({date, ref: it.label + '-BYR', desc: (it.kind === 'ar' ? 'Penerimaan piutang ' : 'Pembayaran utang ') + it.label + ' — ' + (it.party || ''), lines, source:'pelunasan'});
+  } catch(e){ alert(e.message); return; }
+  it.obj.payments = it.obj.payments || [];
+  it.obj.payments.push({id: uid('pay'), date, amount, cashAcc: manual ? '' : cashAcc, journalId: entry ? entry.id : '', note, noJournal: manual});
+  logAudit(it.kind === 'ar' ? 'Terima Pembayaran' : 'Bayar Utang', it.label, fmtRp(amount) + (it.party ? ' — ' + it.party : ''));
+  closeModal();
+  renderCurrent();
+}
+function cancelPayment(type, id, payId){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat membatalkan pelunasan.'); return; }
+  const it = arFind(type, id); if (!it) return;
+  const p = (it.obj.payments || []).find(x => x.id === payId); if (!p || p.voided) return;
+  const j = DB.journal.find(x => x.id === p.journalId);
+  const date = todayISO() < p.date ? p.date : todayISO();
+  if (!p.noJournal && !confirmFiscalDate(date)) return;
+  if (!confirm('Batalkan pelunasan ' + fmtRp(p.amount) + ' tanggal ' + fmtDate(p.date) + '? Jurnal pembalik akan dibuat bertanggal ' + fmtDate(date) + '.')) return;
+  snapshotForUndo('Batalkan Pelunasan');
+  try {
+    if (j && !j.deleted && !p.noJournal) reverseJournalEntry(j, date, 'pelunasan dibatalkan');
+  } catch(e){ alert(e.message); return; }
+  p.voided = true; p.voidDate = date;
+  logAudit('Batalkan Pelunasan', it.label, fmtRp(p.amount));
+  closeModal();
+  renderCurrent();
+}
+function payTableHtml(type, id, o){
+  const rows = (o.payments || []).map(p => `<tr${p.voided ? ' style="opacity:.55;"' : ''}>
+      <td class="tag-small">${fmtDate(p.date)}</td><td>${esc(p.note || '')}${p.voided ? ' <span class="pill pill-warn">dibatalkan</span>' : ''}</td>
+      <td class="num">${fmtRp(p.amount)}</td>
+      <td class="center">${p.voided ? '' : `<button class="btn btn-danger btn-sm" onclick="cancelPayment('${type}','${id}','${p.id}')">Batalkan</button>`}</td></tr>`).join('');
+  return rows ? `<table style="margin-top:12px;"><thead><tr><th>Tanggal</th><th>Catatan</th><th class="num">Jumlah</th><th class="center">Aksi</th></tr></thead><tbody>${rows}</tbody></table>` : '';
+}
+
+/* ---- Batalkan faktur ---- */
+function openVoidInvoiceModal(id){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat membatalkan invoice.'); return; }
+  const inv = DB.invoices.find(x => x.id === id); if (!inv) return;
+  if (inv.voided){ alert('Invoice ini sudah dibatalkan.'); return; }
+  const hasPay = payList(inv).length > 0;
+  const body = `
+    <div class="hint" style="margin-bottom:12px; line-height:1.7;">Pembatalan <strong>INV-${AR_PAD(inv.no)}</strong> (${esc(inv.customer)}, ${fmtRp(inv.grand)}) akan:
+      <ul style="margin:6px 0 0 18px;"><li>membuat jurnal pembalik untuk penjualan${inv.cogs ? ' dan HPP' : ''},</li><li>mengembalikan stok barang ke gudang,</li>${hasPay ? '<li>membalik pelunasan yang sudah dicatat (uang dianggap dikembalikan ke pelanggan),</li>' : ''}<li>menandai invoice sebagai Dibatalkan. Data aslinya tetap tersimpan sebagai arsip.</li></ul></div>
+    <div class="row">
+      <div class="field"><label>Tanggal pembatalan</label><input type="date" id="vi_date" value="${todayISO() < inv.date ? inv.date : todayISO()}"></div>
+      <div class="field"><label>Alasan</label><input id="vi_reason" placeholder="cth. Pelanggan membatalkan pesanan"></div>
+    </div>
+    ${inv.ppn ? '<div class="hint">Invoice ini memakai PPN. Bila faktur pajaknya sudah diterbitkan, lakukan pembatalan atau penggantian di Coretax juga.</div>' : ''}`;
+  openModal('Batalkan Invoice', body, `<button class="btn btn-outline" onclick="closeModal()">Kembali</button><button class="btn btn-danger" onclick="confirmVoidInvoice('${id}')">Batalkan Invoice</button>`);
+}
+function confirmVoidInvoice(id){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat membatalkan invoice.'); return; }
+  const inv = DB.invoices.find(x => x.id === id); if (!inv || inv.voided) return;
+  const date = document.getElementById('vi_date').value;
+  const reason = document.getElementById('vi_reason').value.trim();
+  if (!date){ alert('Tanggal pembatalan wajib diisi.'); return; }
+  if (date < inv.date){ alert('Tanggal pembatalan tidak boleh sebelum tanggal invoice (' + fmtDate(inv.date) + ').'); return; }
+  const no = 'INV-' + AR_PAD(inv.no);
+  const origs = (inv.journalIds || []).map(jid => DB.journal.find(j => j.id === jid)).filter(Boolean);
+  if (origs.some(j => !j.deleted && j.status === 'pending')){ alert('Jurnal invoice ini masih menunggu persetujuan. Setujui atau tolak dulu di Jurnal Umum, baru batalkan invoice.'); return; }
+  if (!confirmFiscalDate(date)) return;
+  const pays = payList(inv).map(p => ({p, j: DB.journal.find(x => x.id === p.journalId)}));
+  const moves = DB.stockMoves.filter(m => m.type === 'out' && m.ref === no);
+  snapshotForUndo('Batalkan Invoice');
+  const rev = [];
+  try {
+    pays.forEach(x => { if (x.j && !x.j.deleted && !x.p.noJournal) rev.push(reverseJournalEntry(x.j, date, 'pembatalan ' + no).id); x.p.voided = true; x.p.voidDate = date; });
+    origs.filter(j => !j.deleted).forEach(j => rev.push(reverseJournalEntry(j, date, reason || 'invoice dibatalkan').id));
+  } catch(e){ alert('Pembatalan gagal: ' + e.message + ' Gunakan tombol Urungkan di atas untuk mengembalikan data.'); renderCurrent(); return; }
+  moves.forEach(m => DB.stockMoves.push({id: uid('stk'), date, code: m.code, type:'in', qty: m.qty, price: m.price, ref: 'BATAL-' + no, note: 'Pembatalan invoice', branch: m.branch || ''}));
+  inv.voided = {date, reason, by: actorName(), reverseIds: rev};
+  logAudit('Batalkan Invoice', no, (reason || '-') + ' — ' + fmtRp(inv.grand));
+  closeModal();
+  renderCurrent();
+}
+
+/* ---- Utang & piutang non-invoice (dari Jurnal Pembelian / Jurnal Penjualan) ---- */
+function arRegisterBill(kind, entry, info){
+  DB.bills = DB.bills || [];
+  DB.counters.bill = (DB.counters.bill || 0) + 1;
+  DB.bills.push({id: uid('bill'), no: DB.counters.bill, kind, date: entry.date, party: info.party || '', ref: info.ref || '', due: info.due || '',
+    amount: info.amount, account: info.account, journalId: entry.id, desc: entry.desc, payments: []});
+}
+function viewBill(id){
+  const b = (DB.bills || []).find(x => x.id === id); if (!b) return;
+  const out = billOutstanding(b);
+  const body = `<div class="row">
+      <div class="field"><label>Dokumen</label><div><strong>${esc(billLabel(b))}</strong></div></div>
+      <div class="field"><label>${b.kind === 'ar' ? 'Pelanggan' : 'Supplier'}</label><div>${esc(b.party || '-')}</div></div>
+      <div class="field"><label>Tanggal</label><div>${fmtDate(b.date)}</div></div>
+      <div class="field"><label>Jatuh tempo</label><div>${b.due ? fmtDate(b.due) : '-'}</div></div></div>
+    <div class="row"><div class="field"><label>Total</label><div>${fmtRp(b.amount)}</div></div><div class="field"><label>Dibayar</label><div>${fmtRp(payTotal(b))}</div></div><div class="field"><label>Sisa</label><div><strong>${fmtRp(out)}</strong></div></div></div>
+    <div class="hint">${esc(b.desc || '')}</div>${payTableHtml('bill', b.id, b)}`;
+  openModal('Rincian ' + (b.kind === 'ar' ? 'Piutang' : 'Utang'), body,
+    `<button class="btn btn-outline" onclick="closeModal()">Tutup</button>${out > 0.5 ? `<button class="btn btn-primary" onclick="openPayModal('bill','${b.id}')">${b.kind === 'ar' ? 'Catat Penerimaan' : 'Catat Pembayaran'}</button>` : ''}`);
+}
+
+/* ---- Halaman Piutang & Utang ---- */
+function arSectionHtml(kind, asOf){
+  const isAr = kind === 'ar';
+  const items = arItems(kind, arShowPaid, asOf).map(x => Object.assign(x, {late: arDaysLate(x, asOf)})).sort((a,b) => b.late - a.late || a.date.localeCompare(b.date));
+  const open = items.filter(x => x.outstanding > 0.5);
+  const sums = [0,0,0,0,0];
+  open.forEach(x => { sums[arBucketIdx(x.late)] += x.outstanding; });
+  const total = sums.reduce((a,b) => a + b, 0);
+  const overdue = sums.slice(1).reduce((a,b) => a + b, 0);
+  const cards = AR_BUCKETS.map((l, i) => `<div class="card" style="padding:12px 14px;"><div class="label">${l}</div><div class="value ${i > 0 && sums[i] > 0 ? 'neg' : ''}" style="font-size:18px;">${fmtRp(sums[i])}</div></div>`).join('');
+  const rows = items.length ? items.map(x => {
+    const bi = arBucketIdx(x.late);
+    const lateTxt = x.outstanding <= 0.5 ? '<span class="pill pill-ok">Lunas</span>' : (x.late > 0 ? `<span class="pill pill-warn">${x.late} hari</span>` : (x.due ? `<span class="muted">${-x.late} hari lagi</span>` : '<span class="muted">tanpa jatuh tempo</span>'));
+    return `<tr>
+      <td class="tag-small">${esc(x.label)}</td><td>${esc(x.party || '-')}</td><td class="tag-small">${fmtDate(x.date)}</td>
+      <td class="tag-small">${x.due ? fmtDate(x.due) : '-'}</td><td class="center">${lateTxt}</td>
+      <td class="num">${fmtRp(x.amount)}</td><td class="num">${fmtRp(x.paid)}</td><td class="num"><strong>${fmtRp(x.outstanding)}</strong></td>
+      <td class="center">${x.type === 'inv' ? `<button class="btn btn-outline btn-sm" onclick="viewInvoice('${x.id}')">Lihat</button>` : `<button class="btn btn-outline btn-sm" onclick="viewBill('${x.id}')">Lihat</button>`}
+        ${x.outstanding > 0.5 ? `<button class="btn btn-primary btn-sm" onclick="openPayModal('${x.type}','${x.id}')">${isAr ? 'Terima' : 'Bayar'}</button>` : ''}</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="9">${isAr ? 'Tidak ada piutang berjalan. Piutang muncul dari invoice atau Jurnal Penjualan yang dicatat ke akun piutang (bukan kas).' : 'Tidak ada utang berjalan. Utang muncul dari Jurnal Pembelian yang dikreditkan ke akun utang (kategori Kewajiban).'}</td></tr>`;
+  return `<div class="section">
+    <div class="section-head"><div><h2>${isAr ? 'Piutang Usaha' : 'Utang Usaha'}</h2>
+      <div class="hint">${open.length} dokumen &middot; total sisa ${fmtRp(total)} &middot; terlambat ${fmtRp(overdue)}</div></div></div>
+    <div class="section-body"><div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-bottom:6px;">${cards}</div></div>
+    <div class="section-body scrollx"><table>
+      <thead><tr><th>Dokumen</th><th>${isAr ? 'Pelanggan' : 'Supplier'}</th><th>Tanggal</th><th>Jatuh tempo</th><th class="center">Status</th><th class="num">Total</th><th class="num">Dibayar</th><th class="num">Sisa</th><th class="center">Aksi</th></tr></thead>
+      <tbody>${rows}</tbody></table></div></div>`;
+}
+function renderPiutang(){
+  if (!arAsOf) arAsOf = todayISO();
+  setContent(`
+    <div class="section">
+      <div class="section-head"><div><h2>Piutang &amp; Utang</h2><div class="hint">Umur tunggakan dihitung dari tanggal jatuh tempo (bila kosong, dari tanggal dokumen). Pelunasan otomatis menjadi jurnal kas</div></div>
+        <button class="btn btn-outline btn-sm ex-btn" onclick="exportArApExcel()">Unduh Excel</button></div>
+      <div class="section-body"><div class="filters">
+        <div class="field"><label>Per tanggal</label><input type="date" value="${esc(arAsOf)}" onchange="arAsOf=this.value||todayISO(); renderCurrent();"></div>
+        <label style="display:flex; align-items:center; gap:6px; padding-bottom:10px;"><input type="checkbox" style="width:auto;" ${arShowPaid ? 'checked' : ''} onchange="arShowPaid=this.checked; renderCurrent();"> Tampilkan yang sudah lunas</label>
+      </div>
+      <div class="hint" style="margin-top:8px;">Invoice lama yang memakai akun piutang tampil sebagai belum dibayar. Bila uangnya sudah Anda catat manual lewat Kas Masuk, tandai dengan opsi &quot;sudah saya catat di jurnal&quot; saat mencatat pelunasan. Utang dan piutang dari Jurnal Penjualan atau Jurnal Pembelian hanya muncul untuk transaksi yang dicatat setelah fitur ini ada.</div></div>
+    </div>
+    ${arSectionHtml('ar', arAsOf)}
+    ${arSectionHtml('ap', arAsOf)}
+  `);
+}
+function arExportSheets(){
+  const mk = kind => {
+    const rows = [['Dokumen','Pihak','Tanggal','Jatuh Tempo','Hari Terlambat','Kelompok Umur','Total','Dibayar','Sisa']];
+    arItems(kind, false, arAsOf || todayISO()).map(x => Object.assign(x, {late: arDaysLate(x, arAsOf || todayISO())})).sort((a,b) => b.late - a.late)
+      .forEach(x => rows.push([x.label, x.party, xlDateCell(x.date), x.due ? xlDateCell(x.due) : '', Math.max(x.late, 0), AR_BUCKETS[arBucketIdx(x.late)], x.amount, x.paid, x.outstanding]));
+    return rows;
+  };
+  return [{name:'Umur Piutang', rows: mk('ar'), widths:[16,28,12,12,14,28,16,16,16], plainCols:[0,1,5]}, {name:'Umur Utang', rows: mk('ap'), widths:[16,28,12,12,14,28,16,16,16], plainCols:[0,1,5]}];
+}
+async function exportArApExcel(){
+  try { await downloadXLSX('umur-piutang-utang-' + todayISO() + '.xlsx', arExportSheets()); logAuditSilent('Ekspor', 'Excel: Umur Piutang & Utang', arAsOf || todayISO()); }
+  catch(e){ alert(e.message); }
+}
+
+/* ---- Pengingat jatuh tempo ---- */
+function dueReminderItems(){
+  const today = todayISO(), out = [];
+  ['ar','ap'].forEach(kind => arItems(kind, false).forEach(x => {
+    if (!x.due) return;
+    const d = arDaysLate(x, today);
+    if (d > -7) out.push(Object.assign(x, {kind, late: d}));
+  }));
+  return out.sort((a,b) => b.late - a.late);
+}
+function dueReminderHtml(){
+  const items = dueReminderItems();
+  if (!items.length) return '';
+  const over = items.filter(x => x.late > 0).length;
+  const rows = items.slice(0, 6).map(x => `<tr><td><span class="pill ${x.kind === 'ar' ? 'pill-pendapatan' : 'pill-kewajiban'}">${x.kind === 'ar' ? 'Piutang' : 'Utang'}</span></td>
+      <td>${esc(x.party || '-')} <span class="tag-small">${esc(x.label)}</span></td><td class="num">${fmtRp(x.outstanding)}</td>
+      <td class="tag-small">${x.late > 0 ? '<span style="color:var(--rust); font-weight:600;">terlambat ' + x.late + ' hari</span>' : (x.late === 0 ? 'jatuh tempo hari ini' : (-x.late) + ' hari lagi')}</td></tr>`).join('');
+  return `<div class="section" style="margin-bottom:14px;">
+    <div class="section-head"><div><h2>Pengingat Jatuh Tempo</h2><div class="hint">${over ? over + ' sudah terlambat, ' : ''}${items.length - over} akan jatuh tempo dalam 7 hari</div></div>
+      <button class="btn btn-outline btn-sm" onclick="switchTab('piutang')">Buka Piutang &amp; Utang</button></div>
+    <div class="section-body scrollx"><table><tbody>${rows}</tbody></table>${items.length > 6 ? `<div class="hint" style="margin-top:8px;">…dan ${items.length - 6} lainnya</div>` : ''}</div></div>`;
+}
+function updateDueBadge(){
+  const btn = document.querySelector('#navlist button[data-tab="piutang"]');
+  if (!btn) return;
+  let b = btn.querySelector('.due-badge');
+  let n = 0; try { n = dueReminderItems().filter(x => x.late > 0).length; } catch(e){}
+  if (!n){ if (b) b.remove(); return; }
+  if (!b){ b = document.createElement('span'); b.className = 'due-badge'; btn.appendChild(b); }
+  b.textContent = n > 99 ? '99+' : String(n);
+  b.title = n + ' tagihan sudah lewat jatuh tempo';
+}
+
+/* ================= IMPOR MUTASI BANK (REKONSILIASI) ================= */
+let bankPlan = null;
+function bankParseCsv(text){
+  text = String(text || '').replace(/^﻿/, '');
+  const first = text.split(/\r?\n/).find(l => l.trim()) || '';
+  const delim = [';','\t',','].map(d => [d, first.split(d).length]).sort((a,b) => b[1] - a[1])[0][0];
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q){ if (c === '"'){ if (text[i+1] === '"'){ cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === delim){ row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r'){ if (c === '\r' && text[i+1] === '\n') i++; row.push(cur); cur = ''; if (row.some(x => String(x).trim())) rows.push(row); row = []; }
+    else cur += c;
+  }
+  row.push(cur); if (row.some(x => String(x).trim())) rows.push(row);
+  return rows;
+}
+function bankNum(v){
+  const t = String(v == null ? '' : v).trim().replace(/rp/ig,'').replace(/\s/g,'');
+  if (/^-?\(?\d{1,3}(,\d{3})+\)?$/.test(t)) return xlNum(t.replace(/,/g,''));   // 250,000 di rekening koran berarti dua ratus lima puluh ribu
+  return xlNum(v);
+}
+function bankBuildLines(rows, debitIsOut){
+  const norm = s => String(s == null ? '' : s).toLowerCase().trim();
+  let h = -1, col = {};
+  for (let i = 0; i < Math.min(rows.length, 15); i++){
+    const r = rows[i].map(norm);
+    const c = {
+      date: r.findIndex(x => /^(tanggal|tgl|date|tanggal transaksi|posting date)/.test(x)),
+      desc: r.findIndex(x => /(uraian|keterangan|deskripsi|description|remark|berita|narasi)/.test(x)) >= 0 ? r.findIndex(x => /(uraian|keterangan|deskripsi|description|remark|berita|narasi)/.test(x)) : r.findIndex(x => /^transaksi$|^(jenis )?transaksi$/.test(x)),
+      debit: r.findIndex(x => /^(debit|debet|db|keluar|uang keluar|pengeluaran)/.test(x)),
+      kredit: r.findIndex(x => /^(kredit|cr|credit|masuk|uang masuk|pemasukan)/.test(x)),
+      amount: r.findIndex(x => /^(jumlah|mutasi|amount|nominal)/.test(x)),
+      type: r.findIndex(x => /^(d\/k|dk|cr\/db|db\/cr|tipe|type|jenis)/.test(x)),
+      saldo: r.findIndex(x => /^(saldo|balance)/.test(x))
+    };
+    if (c.date >= 0 && (c.debit >= 0 || c.kredit >= 0 || c.amount >= 0)){ h = i; col = c; break; }
+  }
+  if (h < 0) return {error: 'Judul kolom tidak dikenali. File harus punya kolom Tanggal dan Debit/Kredit atau Jumlah. Unduh contoh formatnya di bawah.', lines: []};
+  const lines = [], bad = [];
+  for (let i = h + 1; i < rows.length; i++){
+    const r = rows[i];
+    const date = xlDateParse(r[col.date]);
+    if (!date){ if (r.some(x => String(x).trim())) bad.push('Baris ' + (i + 1) + ': tanggal tidak terbaca'); continue; }
+    let amt = 0;
+    const dv = col.debit >= 0 ? Math.abs(bankNum(r[col.debit])) : 0, kv = col.kredit >= 0 ? Math.abs(bankNum(r[col.kredit])) : 0;
+    if (col.debit >= 0 || col.kredit >= 0){
+      amt = debitIsOut ? (kv - dv) : (dv - kv);
+    } else {
+      amt = bankNum(r[col.amount]);
+      const t = col.type >= 0 ? norm(r[col.type]) : '';
+      if (/^(db|d|debit|debet)$/.test(t)) amt = -Math.abs(amt); else if (/^(cr|k|kredit|credit)$/.test(t)) amt = Math.abs(amt);
+    }
+    if (!amt){ continue; }
+    lines.push({date, desc: String(r[col.desc] == null ? '' : r[col.desc]).trim(), amount: amt, saldo: col.saldo >= 0 ? bankNum(r[col.saldo]) : null});
+  }
+  return {lines, bad};
+}
+function bankMatch(accCode, lines){
+  const books = reconCashEntries(accCode, '9999-12-31').filter(r => !r.cleared).map(r => Object.assign(r, {signed: r.debit - r.kredit, used: false}));
+  const words = s => new Set(String(s || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2));
+  const matched = [], unBank = [];
+  lines.slice().sort((a,b) => a.date.localeCompare(b.date)).forEach(L => {
+    let best = null, bestScore = -1;
+    const lw = words(L.desc);
+    books.forEach(b => {
+      if (b.used || Math.abs(b.signed - L.amount) > 0.5) return;
+      const dd = Math.abs(arDayNum(b.date) - arDayNum(L.date));
+      if (dd > 7) return;
+      const bw = words(b.desc + ' ' + (b.ref || '')); let shared = 0; lw.forEach(w => { if (bw.has(w)) shared++; });
+      const score = shared * 10 - dd;
+      if (score > bestScore){ best = b; bestScore = score; }
+    });
+    if (best){ best.used = true; matched.push({bank: L, book: best}); } else unBank.push(L);
+  });
+  const minD = lines.length ? lines.reduce((m, l) => l.date < m ? l.date : m, lines[0].date) : '', maxD = lines.length ? lines.reduce((m, l) => l.date > m ? l.date : m, lines[0].date) : '';
+  const unBook = books.filter(b => !b.used && b.date >= minD && b.date <= maxD);
+  return {matched, unBank, unBook};
+}
+let bankState = {rows: null, fileName: '', debitIsOut: true};
+async function handleBankFile(input){
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (isViewer()){ alert('Peran User hanya dapat melihat data.'); input.value = ''; return; }
+  try {
+    let rows;
+    if (/\.(csv|txt)$/i.test(file.name)) rows = bankParseCsv(await file.text());
+    else { const XL = await loadXLSX(); const wb = XL.read(await file.arrayBuffer(), {type:'array'}); rows = XL.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:true, defval:''}); }
+    bankState = {rows, fileName: file.name, debitIsOut: true};
+  } catch(e){ alert('File tidak bisa dibaca: ' + e.message); input.value = ''; return; }
+  input.value = '';
+  showBankPreview();
+}
+function bankRecompute(){
+  const r = bankBuildLines(bankState.rows, bankState.debitIsOut);
+  if (r.error){ bankPlan = {error: r.error}; return; }
+  bankPlan = Object.assign({bad: r.bad, lines: r.lines}, bankMatch(reconAccount, r.lines));
+}
+function showBankPreview(){
+  bankRecompute();
+  const p = bankPlan;
+  let body;
+  if (p.error) body = `<div class="balance-check bad">${esc(p.error)}</div>`;
+  else {
+    const rowT = (L, extra) => `<tr><td class="tag-small">${fmtDate(L.date)}</td><td>${esc(L.desc || '-')}</td><td class="num" style="color:${L.amount >= 0 ? 'var(--green)' : 'var(--rust)'};">${L.amount >= 0 ? '+' : '-'}${fmtRp(Math.abs(L.amount))}</td>${extra || ''}</tr>`;
+    const unB = p.unBank.slice(0, 40).map((L, i) => rowT(L, `<td class="center"><button class="btn btn-outline btn-sm" onclick="bankQuickAdd(${i})">Catat</button></td>`)).join('');
+    body = `
+      <label style="display:flex; align-items:center; gap:6px; margin-bottom:10px;"><input type="checkbox" style="width:auto;" ${bankState.debitIsOut ? 'checked' : ''} onchange="bankState.debitIsOut=this.checked; showBankPreview();"> Kolom <strong>Debit</strong> di file adalah uang keluar (standar rekening koran). Hilangkan centang bila terbalik.</label>
+      <div class="row" style="gap:12px; flex-wrap:wrap;">
+        <div class="field" style="min-width:130px;"><label>Baris di file</label><div style="font-size:20px; font-weight:600;">${p.lines.length}</div></div>
+        <div class="field" style="min-width:130px;"><label>Cocok otomatis</label><div style="font-size:20px; font-weight:600; color:var(--green);">${p.matched.length}</div></div>
+        <div class="field" style="min-width:130px;"><label>Belum ada di pembukuan</label><div style="font-size:20px; font-weight:600; color:var(--rust);">${p.unBank.length}</div></div>
+        <div class="field" style="min-width:130px;"><label>Belum muncul di bank</label><div style="font-size:20px; font-weight:600;">${p.unBook.length}</div></div>
+      </div>
+      <div class="hint" style="margin:8px 0;">Pencocokan memakai jumlah yang sama persis dan tanggal berselisih paling lama 7 hari. Akun: <strong>${esc(reconAccount)}</strong>.</div>
+      ${p.bad && p.bad.length ? `<div class="balance-check bad" style="margin-bottom:10px;">${p.bad.length} baris dilewati (${esc(p.bad.slice(0, 3).join('; '))}${p.bad.length > 3 ? '…' : ''})</div>` : ''}
+      ${p.unBank.length ? `<div style="margin-top:10px;"><strong>Ada di bank, belum ada di pembukuan</strong><div class="scrollx" style="max-height:220px; overflow:auto;"><table><tbody>${unB}</tbody></table></div>${p.unBank.length > 40 ? `<div class="hint">…dan ${p.unBank.length - 40} lainnya</div>` : ''}<div class="hint">Mis. biaya admin, bunga, atau transfer yang belum Anda catat. Klik Catat untuk membuka Jurnal Kas yang sudah terisi.</div></div>` : ''}`;
+  }
+  const foot = `<button class="btn btn-outline" onclick="closeModal()">Batal</button>` + (p.error || !p.matched.length ? '' : `<button class="btn btn-primary" onclick="applyBankMatch()">Tandai ${p.matched.length} transaksi sudah cocok</button>`);
+  openModal('Pratinjau Mutasi Bank — ' + (bankState.fileName || ''), body, foot);
+}
+function applyBankMatch(){
+  const p = bankPlan; if (!p || p.error || !p.matched.length) return;
+  if (isViewer()) return;
+  snapshotForUndo('Cocokkan Mutasi Bank');
+  p.matched.forEach(m => {
+    const j = DB.journal.find(x => x.id === m.book.jid); if (!j) return;
+    j.clearedBank = j.clearedBank || {}; j.clearedBank[reconAccount] = true;
+  });
+  const dates = p.lines.map(l => l.date).sort();
+  if (dates.length) reconDate = dates[dates.length - 1];
+  const last = p.lines.filter(l => l.saldo != null && l.date === reconDate).pop();
+  if (last && isFinite(last.saldo) && last.saldo !== 0) reconStatementBalance = last.saldo;
+  logAudit('Rekonsiliasi', 'Akun ' + reconAccount, p.matched.length + ' transaksi dicocokkan dari ' + (bankState.fileName || 'file bank'));
+  closeModal();
+  renderCurrent();
+}
+function bankQuickAdd(i){
+  const L = bankPlan && bankPlan.unBank[i]; if (!L) return;
+  closeModal();
+  const type = L.amount >= 0 ? 'masuk' : 'keluar';
+  openKasModal(type);
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('km_date', L.date); set('km_amount', String(Math.abs(L.amount))); set('km_desc', L.desc || 'Mutasi bank'); set('km_kas_acc', reconAccount);
+}
+function downloadBankTemplate(){
+  downloadCSV('contoh-mutasi-bank.csv', [['Tanggal','Keterangan','Debit','Kredit','Saldo'],['2026-10-02','TRF dari PT Sumber Makmur','',5000000,15000000],['2026-10-03','Biaya admin bulanan',15000,'',14985000]]);
+}
+function bankSectionHtml(){
+  if (isViewer()) return '';
+  return `<div class="section">
+    <div class="section-head"><div><h2>Impor Mutasi Bank (opsional)</h2><div class="hint">Unggah rekening koran dari internet banking (CSV atau Excel). Transaksi yang jumlahnya sama dicocokkan otomatis, sehingga Anda tidak perlu mencentang satu per satu</div></div>
+      <button class="btn btn-outline btn-sm" onclick="downloadBankTemplate()">Unduh contoh format</button></div>
+    <div class="section-body"><input type="file" accept=".csv,.txt,.xlsx,.xls" onchange="handleBankFile(this)">
+      <div class="hint" style="margin-top:8px;">Kolom yang dikenali: Tanggal, Keterangan/Uraian, Debit, Kredit (atau satu kolom Jumlah/Mutasi), dan Saldo. Data tidak dikirim ke server mana pun, hanya dibaca di peramban Anda.</div></div></div>`;
+}
+
+/* ================= BUKTI POTONG PPh 21 & PPh 23 ================= */
+let trMasa = 'all';
+function trRecs(){ DB.taxRecords = DB.taxRecords || []; return DB.taxRecords; }
+function trNextNo(type, masa){
+  const prefix = (type === 'pph21' ? 'BP21' : 'BP23') + '-' + masa.replace('-', '') + '-';
+  let n = trRecs().filter(r => r.type === type && r.masa === masa).length + 1;
+  while (trRecs().some(r => r.no === prefix + String(n).padStart(3,'0'))) n++;
+  return prefix + String(n).padStart(3,'0');
+}
+function openTaxRecModal(type){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat mencatat bukti potong.'); return; }
+  const is21 = type === 'pph21';
+  const ptkpOpts = Object.keys(PTKP_STATUS).map(k => `<option value="${k}">${k} (TER ${PTKP_STATUS[k].cat})</option>`).join('');
+  const jenisOpts = Object.keys(PPH23_JENIS).map(k => `<option value="${k}">${esc(PPH23_JENIS[k].label)} (${PPH23_JENIS[k].rate}%)</option>`).join('');
+  const body = `
+    <div class="row">
+      <div class="field"><label>Tanggal pemotongan</label><input type="date" id="tr_date" value="${todayISO()}"></div>
+      <div class="field"><label>${is21 ? 'Nama karyawan' : 'Nama penerima penghasilan'}</label><input id="tr_name"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>NPWP / NIK</label><input id="tr_npwp" placeholder="16 digit NIK atau NPWP"></div>
+      ${is21 ? `<div class="field"><label>Status PTKP</label><select id="tr_ptkp" onchange="trCalc()">${ptkpOpts}</select></div>`
+             : `<div class="field"><label>Jenis penghasilan</label><select id="tr_jenis" onchange="trCalc()">${jenisOpts}</select></div>`}
+    </div>
+    <div class="row">
+      <div class="field"><label>Penghasilan bruto</label><input type="number" id="tr_gross" value="0" oninput="trCalc()"></div>
+      ${is21 ? '' : '<label style="display:flex; align-items:center; gap:6px; padding-top:22px;"><input type="checkbox" id="tr_hasnpwp" checked style="width:auto;" onchange="trCalc()"> Penerima punya NPWP</label>'}
+    </div>
+    <div class="row">
+      <div class="field"><label>Tarif</label><input id="tr_rate" disabled></div>
+      <div class="field"><label>Pajak dipotong (boleh disesuaikan)</label><input type="number" id="tr_tax" value="0"></div>
+    </div>
+    <div class="field"><label>Catatan (opsional)</label><input id="tr_note" placeholder="${is21 ? 'cth. Gaji Oktober 2026' : 'cth. Jasa konsultan, invoice 123'}"></div>
+    ${is21 ? '<div class="hint">Untuk masa Januari sampai November memakai tarif efektif rata-rata (TER). Untuk Desember, hitung ulang setahun di bagian PPh 21 lalu isi pajaknya manual.</div>' : ''}`;
+  openModal(is21 ? 'Catat Bukti Potong PPh 21' : 'Catat Bukti Potong PPh 23', body,
+    `<button class="btn btn-outline" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveTaxRec('${type}')">Simpan</button>`);
+  window._trType = type; trCalc();
+}
+function trCalc(){
+  const type = window._trType; if (!type) return;
+  const gross = parseNum(document.getElementById('tr_gross').value);
+  let rate = 0, tax = 0;
+  if (type === 'pph21'){ const st = PTKP_STATUS[document.getElementById('tr_ptkp').value]; rate = terRate(st.cat, gross); tax = pph21Ter(st.cat, gross); }
+  else { const r = pph23Calc(gross, document.getElementById('tr_jenis').value, document.getElementById('tr_hasnpwp').checked); rate = r.rate; tax = r.tax; }
+  document.getElementById('tr_rate').value = String(rate).replace('.', ',') + '%';
+  document.getElementById('tr_tax').value = String(tax);
+  window._trRate = rate;
+}
+function saveTaxRec(type){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat mencatat bukti potong.'); return; }
+  const date = document.getElementById('tr_date').value, name = document.getElementById('tr_name').value.trim();
+  const npwp = document.getElementById('tr_npwp').value.trim(), gross = parseNum(document.getElementById('tr_gross').value);
+  const tax = parseNum(document.getElementById('tr_tax').value), note = document.getElementById('tr_note').value.trim();
+  if (!date){ alert('Tanggal wajib diisi.'); return; }
+  if (!name){ alert('Nama penerima wajib diisi.'); return; }
+  if (!(gross > 0)){ alert('Penghasilan bruto harus lebih dari nol.'); return; }
+  if (!(tax >= 0) || tax > gross){ alert('Pajak dipotong tidak boleh negatif atau lebih besar dari penghasilan bruto.'); return; }
+  const masa = date.slice(0, 7);
+  const jenis = type === 'pph21' ? 'Status ' + document.getElementById('tr_ptkp').value : (PPH23_JENIS[document.getElementById('tr_jenis').value] || {}).label;
+  snapshotForUndo('Catat Bukti Potong');
+  const rec = {id: uid('tr'), no: trNextNo(type, masa), type, date, masa, name, npwp, jenis, gross, rate: window._trRate || 0, tax, note};
+  trRecs().push(rec);
+  logAudit('Tambah', 'Bukti potong ' + rec.no, name + ' — ' + fmtRp(tax));
+  closeModal();
+  renderCurrent();
+}
+function deleteTaxRec(id){
+  if (!isAdminLevel()){ alert('Hanya Owner atau Admin yang dapat menghapus bukti potong.'); return; }
+  const r = trRecs().find(x => x.id === id); if (!r) return;
+  if (!confirm('Hapus catatan bukti potong ' + r.no + '?')) return;
+  snapshotForUndo('Hapus Bukti Potong');
+  DB.taxRecords = trRecs().filter(x => x.id !== id);
+  logAudit('Hapus', 'Bukti potong ' + r.no, r.name);
+  renderCurrent();
+}
+function trFiltered(){
+  return trRecs().filter(r => trMasa === 'all' || r.masa === trMasa).sort((a,b) => a.date.localeCompare(b.date) || a.no.localeCompare(b.no));
+}
+function taxRecSectionHtml(){
+  const months = fiscalMonths();
+  const recs = trFiltered();
+  const t21 = recs.filter(r => r.type === 'pph21').reduce((s,r) => s + r.tax, 0), t23 = recs.filter(r => r.type === 'pph23').reduce((s,r) => s + r.tax, 0);
+  const canEdit = isAdminLevel();
+  const rows = recs.length ? recs.map(r => `<tr><td class="tag-small">${esc(r.no)}</td><td class="tag-small">${fmtDate(r.date)}</td>
+      <td>${esc(r.name)}<div class="hint">${esc(r.npwp || 'NPWP/NIK belum diisi')}</div></td><td class="tag-small">${esc(r.jenis || '')}</td>
+      <td class="num">${fmtRp(r.gross)}</td><td class="num">${String(r.rate).replace('.', ',')}%</td><td class="num"><strong>${fmtRp(r.tax)}</strong></td>
+      <td class="center"><button class="btn btn-outline btn-sm" onclick="printTaxRec('${r.id}')">Cetak</button>${canEdit ? ` <button class="btn btn-danger btn-sm" onclick="deleteTaxRec('${r.id}')">Hapus</button>` : ''}</td></tr>`).join('')
+    : `<tr class="empty-row"><td colspan="8">Belum ada catatan bukti potong pada masa pajak ini.</td></tr>`;
+  return `<div class="section">
+    <div class="section-head"><div><h2>Bukti Potong PPh 21 &amp; PPh 23</h2><div class="hint">Catatan pemotongan per penerima. Dipakai untuk mencetak ringkasan, merekap per masa pajak, dan menyalin ke Coretax (e-Bupot)</div></div>
+      <div class="toolbar">${canEdit ? '<button class="btn btn-primary btn-sm" onclick="openTaxRecModal(\'pph21\')">+ PPh 21</button><button class="btn btn-primary btn-sm" onclick="openTaxRecModal(\'pph23\')">+ PPh 23</button>' : ''}
+        <button class="btn btn-outline btn-sm ex-btn" onclick="exportTaxRecExcel()">Unduh Excel</button></div></div>
+    <div class="section-body"><div class="filters"><div class="field"><label>Masa pajak</label><select onchange="trMasa=this.value; renderCurrent();">
+      <option value="all" ${trMasa === 'all' ? 'selected' : ''}>Semua masa</option>${months.map(m => `<option value="${m}" ${trMasa === m ? 'selected' : ''}>${esc(monthLabel(m))}</option>`).join('')}</select></div></div></div>
+    <div class="section-body scrollx"><table><thead><tr><th>Nomor</th><th>Tanggal</th><th>Penerima</th><th>Jenis</th><th class="num">Bruto</th><th class="num">Tarif</th><th class="num">Pajak</th><th class="center">Aksi</th></tr></thead>
+      <tbody>${rows}</tbody><tfoot><tr class="tot"><td colspan="6">Total PPh 21 ${fmtRp(t21)} &middot; PPh 23 ${fmtRp(t23)}</td><td class="num">${fmtRp(t21 + t23)}</td><td></td></tr></tfoot></table></div>
+    <div class="section-body" style="padding-top:0;"><div class="hint">Dokumen cetak di sini adalah catatan internal, bukan bukti potong resmi. Bukti potong resmi diterbitkan melalui Coretax (e-Bupot). Setor PPh 21 dan 23 paling lambat tanggal 10 bulan berikutnya, lapor paling lambat tanggal 20.</div></div></div>`;
+}
+function trExportSheets(){
+  const mk = type => {
+    const rows = [['Nomor','Masa Pajak','Tanggal','Nama','NPWP / NIK','Jenis','Penghasilan Bruto','Tarif (%)','PPh Dipotong','Catatan']];
+    trFiltered().filter(r => r.type === type).forEach(r => rows.push([r.no, monthLabel(r.masa), xlDateCell(r.date), r.name, r.npwp || '', r.jenis || '', r.gross, r.rate, r.tax, r.note || '']));
+    return rows;
+  };
+  return [{name:'PPh 21', rows: mk('pph21'), widths:[16,16,12,28,24,30,18,10,16,30], plainCols:[0,1,3,4,5,9]}, {name:'PPh 23', rows: mk('pph23'), widths:[16,16,12,28,24,30,18,10,16,30], plainCols:[0,1,3,4,5,9]}];
+}
+async function exportTaxRecExcel(){
+  try { await downloadXLSX('rekap-bukti-potong-' + todayISO() + '.xlsx', trExportSheets()); logAuditSilent('Ekspor', 'Excel: Rekap Bukti Potong', trMasa); }
+  catch(e){ alert(e.message); }
+}
+function printTaxRec(id){
+  const r = trRecs().find(x => x.id === id); if (!r) return;
+  const c = DB.company || {};
+  const win = window.open('', '_blank', 'width=820,height=920');
+  if (!win){ alert('Pop-up diblokir peramban. Izinkan pop-up untuk situs ini agar bisa mencetak.'); return; }
+  const css = `body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif; color:#182633; margin:28px;} h1{font-size:18px; margin:0 0 4px;} .sub{font-size:12px; color:#5B6B7C;}
+    table{border-collapse:collapse; width:100%; font-size:13px; margin-top:14px;} td{padding:8px 10px; border:1px solid #DDE3E9; vertical-align:top;} td.k{width:34%; background:#F6F8FA; color:#5B6B7C;}
+    .warn{margin-top:16px; padding:10px 12px; border:1px dashed #C9A24D; background:#FFF9EC; font-size:12px; color:#6B5412;} .sign{margin-top:36px; text-align:right; font-size:13px;} @media print{body{margin:0;}}`;
+  const row = (k, v) => `<tr><td class="k">${k}</td><td>${v}</td></tr>`;
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + esc(r.no) + '</title><style>' + css + '</style></head><body>' +
+    `<div style="display:flex; gap:12px; align-items:center;">${c.logo ? `<img src="${esc(c.logo)}" style="max-height:52px;">` : ''}<div><div style="font-weight:700;">${esc(c.name || '')}</div><div class="sub">${esc([c.address, c.city, c.npwp ? 'NPWP ' + c.npwp : ''].filter(Boolean).join(' · '))}</div></div></div>` +
+    `<h1 style="margin-top:20px;">Catatan Pemotongan ${r.type === 'pph21' ? 'PPh Pasal 21' : 'PPh Pasal 23'}</h1><div class="sub">Nomor ${esc(r.no)} &middot; Masa pajak ${esc(monthLabel(r.masa))}</div>` +
+    '<table>' + row('Pemotong', esc(c.name || '-') + (c.npwp ? '<br>NPWP ' + esc(c.npwp) : '')) + row('Penerima penghasilan', esc(r.name) + '<br>NPWP / NIK: ' + esc(r.npwp || '-')) +
+    row('Jenis penghasilan', esc(r.jenis || '-')) + row('Tanggal pemotongan', fmtDate(r.date)) + row('Penghasilan bruto', fmtRp(r.gross)) + row('Tarif', String(r.rate).replace('.', ',') + '%') +
+    row('PPh dipotong', '<strong>' + fmtRp(r.tax) + '</strong>') + (r.note ? row('Catatan', esc(r.note)) : '') + '</table>' +
+    '<div class="warn">Dokumen ini adalah catatan internal perusahaan, bukan bukti potong resmi. Bukti potong resmi dibuat dan diterbitkan melalui Coretax (e-Bupot).</div>' +
+    `<div class="sign">${esc([c.signCity || c.city, fmtDate(todayISO())].filter(Boolean).join(', '))}<div style="height:60px;"></div>${esc(c.approvedBy || '')}</div></body></html>`);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+  setTimeout(() => { try { win.focus(); win.print(); } catch(e){} }, 400);
+}
+
+
 /* ---------------- Ikon navigasi (SVG garis tipis, seragam) ---------------- */
 const NAV_ICONS = {
   excel:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h2"/>',
@@ -6652,6 +7296,7 @@ const NAV_ICONS = {
   penyusutan:'<path d="M22 17l-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>',
   inventory:'<path d="M11 21.7a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7z"/><path d="M12 22V12M3.3 7 12 12l8.7-5"/>',
   invoice:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M15 8h-5a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8M12 6v2M12 16v2"/>',
+  piutang:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   rekonsiliasi:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
   anggaran:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
   pajak:'<path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/>',
